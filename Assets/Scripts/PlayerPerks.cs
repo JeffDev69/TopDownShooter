@@ -1,10 +1,19 @@
 using System.Collections.Generic;
+using System.Text;
+using TMPro;
 using UnityEngine;
 
 // Onthoudt purchased perks en activeert elk permanent effect maar één keer per run.
 public class PlayerPerks : MonoBehaviour
 {
     private readonly HashSet<PerkMachine.PerkType> owned = new HashSet<PerkMachine.PerkType>();
+    private TextMeshProUGUI perkHud;
+
+    private void Start()
+    {
+        CreatePerkHud();
+        UpdatePerkHud();
+    }
 
     public bool HasPerk(PerkMachine.PerkType perk)
     {
@@ -42,6 +51,53 @@ public class PlayerPerks : MonoBehaviour
                 break;
         }
         owned.Add(perk);
+        UpdatePerkHud();
         return true;
+    }
+
+    // Maakt automatisch een HUD onder de hearts; er is geen Inspector setup nodig.
+    private void CreatePerkHud()
+    {
+        Canvas canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) return;
+
+        GameObject hudObject = new GameObject("PerkHUD");
+        hudObject.layer = canvas.gameObject.layer;
+        hudObject.transform.SetParent(canvas.transform, false);
+
+        RectTransform rect = hudObject.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.anchoredPosition = new Vector2(20f, -140f);
+        rect.sizeDelta = new Vector2(520f, 190f);
+
+        perkHud = hudObject.AddComponent<TextMeshProUGUI>();
+        perkHud.raycastTarget = false;
+        perkHud.richText = true;
+        perkHud.fontSize = 28f;
+        perkHud.alignment = TextAlignmentOptions.TopLeft;
+        perkHud.margin = Vector4.zero;
+
+        UnityEngine.UI.Outline outline = hudObject.AddComponent<UnityEngine.UI.Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        outline.effectDistance = new Vector2(2f, -2f);
+    }
+
+    private void UpdatePerkHud()
+    {
+        if (perkHud == null) return;
+        StringBuilder text = new StringBuilder();
+        if (HasPerk(PerkMachine.PerkType.VitalityBrew))
+            text.AppendLine("<color=#FF5B5B><b>[+] VITALITY BREW</b></color>");
+        if (HasPerk(PerkMachine.PerkType.StaminaRush))
+            text.AppendLine("<color=#61E86F><b>[>>] STAMINA RUSH</b></color>");
+        if (HasPerk(PerkMachine.PerkType.QuickReload))
+            text.AppendLine("<color=#55C7FF><b>[R] QUICK RELOAD</b></color>");
+        if (HasPerk(PerkMachine.PerkType.DoubleDamage))
+            text.AppendLine("<color=#D36AFF><b>[x2] DOUBLE DAMAGE</b></color>");
+
+        perkHud.text = text.ToString().TrimEnd();
+        perkHud.gameObject.SetActive(text.Length > 0);
     }
 }

@@ -5,13 +5,17 @@ using UnityEngine;
 public class EnemyHealth : MonoBehaviour
 {
     public int health = 3;
+    [Range(0.05f, 10f)] public float incomingDamageMultiplier = 1f;
     public Color hitFlashColor = Color.red;
     public float hitFlashDuration = 0.1f;
     public ParticleSystem bloodEffect;
-    public Sprite corpseSprite;
-    public float corpseDuration = 2f;
-    public float corpseFadeDuration = 0.75f;
     public int coinsOnDeath = 10;
+
+    [Header("Blood Pool")]
+    public float bloodPoolWidth = 1.8f;
+    public float bloodPoolDuration = 6f;
+    public float bloodPoolFadeDuration = 1.5f;
+    public float deathCleanupDelay = 0.3f;
 
     [Header("Power-Up Drops")]
     [Range(0f, 1f)] public float maxAmmoDropChance = 0.08f;
@@ -22,6 +26,11 @@ public class EnemyHealth : MonoBehaviour
     private Color normalColor;
     private bool isDead;
     private EnemySpawner roundOwner;
+    private static Sprite cachedBloodPoolSprite;
+
+    public int CurrentHealth => health;
+    public bool IsDead => isDead;
+    public event System.Action<EnemyHealth> Died;
 
     public void SetRoundOwner(EnemySpawner owner)
     {
@@ -45,7 +54,10 @@ public class EnemyHealth : MonoBehaviour
             return;
         }
 
-        health = damage > 0 && PlayerShoot.InstaKillActive ? 0 : health - damage;
+        if (damage > 0 && PlayerShoot.InstaKillActive)
+            health = 0;
+        else
+            health -= Mathf.Max(1, Mathf.CeilToInt(damage * incomingDamageMultiplier));
         SpawnBlood();
 
         if (health <= 0)
@@ -74,12 +86,25 @@ public class EnemyHealth : MonoBehaviour
         StopAllCoroutines();
         SpawnBlood();
         // Nuke kills still award coins and count toward the round, but do not drop more power-ups.
-        StartCoroutine(Die(false));
+        StartCoroutine(Die(false, false));
     }
 
-    private IEnumerator Die(bool allowPowerUpDrop = true)
+    public void KillFromEnemyAbility()
+    {
+        if (isDead) return;
+        health = 0;
+        StopAllCoroutines();
+        SpawnBlood();
+        StartCoroutine(Die(false, true));
+    }
+
+    private IEnumerator Die(bool allowPowerUpDrop = true, bool triggerDeathEffects = true)
     {
         isDead = true;
+
+        // Special zombies mogen hier hun eigen death effect uitvoeren.
+        if (triggerDeathEffects)
+            Died?.Invoke(this);
 
         if (roundOwner != null)
             roundOwner.RegisterKill();
@@ -124,38 +149,46 @@ public class EnemyHealth : MonoBehaviour
             enemyBody.simulated = false;
         }
 
+        SpawnBloodPool();
+
+        // Het oude corpse verdwijnt; de losse blood pool blijft zelfstandig liggen.
         if (spriteRenderer != null)
-        {
-            if (corpseSprite != null)
-            {
-                spriteRenderer.sprite = corpseSprite;
-            }
+            spriteRenderer.enabled = false;
 
-            spriteRenderer.color = Color.white;
-        }
-
-        yield return new WaitForSeconds(corpseDuration);
-
-        if (spriteRenderer != null && corpseFadeDuration > 0f)
-        {
-            float elapsed = 0f;
-            Color startColor = spriteRenderer.color;
-
-            while (elapsed < corpseFadeDuration)
-            {
-                elapsed += Time.deltaTime;
-                float alpha = 1f - Mathf.Clamp01(elapsed / corpseFadeDuration);
-                spriteRenderer.color = new Color(
-                    startColor.r,
-                    startColor.g,
-                    startColor.b,
-                    alpha
-                );
-                yield return null;
-            }
-        }
+        yield return new WaitForSeconds(Mathf.Max(0f, deathCleanupDelay));
 
         Destroy(gameObject);
+    }
+
+    private void SpawnBloodPool()
+    {
+        if (cachedBloodPoolSprite == null)
+            cachedBloodPoolSprite = Resources.Load<Sprite>("BloodPool");
+        if (cachedBloodPoolSprite == null)
+        {
+            Debug.LogWarning("BloodPool sprite could not be loaded from Assets/Resources.", this);
+            return;
+        }
+
+        GameObject pool = new GameObject("BloodPool");
+        pool.transform.position = transform.position;
+        pool.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+
+        SpriteRenderer poolRenderer = pool.AddComponent<SpriteRenderer>();
+        poolRenderer.sprite = cachedBloodPoolSprite;
+        if (spriteRenderer != null)
+        {
+            poolRenderer.sortingLayerID = spriteRenderer.sortingLayerID;
+            poolRenderer.sortingOrder = spriteRenderer.sortingOrder - 1;
+        }
+
+        float spriteWidth = Mathf.Max(0.01f, cachedBloodPoolSprite.bounds.size.x);
+        float zombieSize = Mathf.Clamp(Mathf.Max(transform.lossyScale.x, transform.lossyScale.y), 1f, 1.6f);
+        float scale = Mathf.Max(0.2f, bloodPoolWidth) * zombieSize / spriteWidth;
+        pool.transform.localScale = Vector3.one * scale * Random.Range(0.9f, 1.1f);
+
+        BloodPoolFade fade = pool.AddComponent<BloodPoolFade>();
+        fade.Initialize(poolRenderer, bloodPoolDuration, bloodPoolFadeDuration);
     }
 
     private void SpawnBlood()

@@ -1738,7 +1738,7 @@ Transform:
   m_GameObject: {fileID: 792696285}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.03, y: 0.59, z: 0}
   m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1953,7 +1953,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95a6d042880ad634bb64f9fc14ff212c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PerkMachine
-  perkType: 0
+  perkType: 3
   interactionDistance: 2
   machineRenderer: {fileID: 0}
 --- !u!61 &924251525
@@ -3479,10 +3479,26 @@ MonoBehaviour:
   enemyPrefab: {fileID: 4862405713319355564, guid: 1cab5173016dcca4591f356638cb44ca, type: 3}
   tankPrefab: {fileID: 4862405713319355564, guid: f23105dc8369ffe468a90c4e2d3c1535, type: 3}
   tankSpawnChance: 0.303
+  exploderPrefab: {fileID: 2150784112309820545, guid: cb886412135b2fd41b728fdecd059794, type: 3}
+  armoredPrefab: {fileID: 5179403184948414539, guid: fc3cf7032e7f45d4580a39ebdb152772, type: 3}
+  spitterPrefab: {fileID: 4375283769775700097, guid: f0ec2827f17d1e947bd05b494c40ffc1, type: 3}
+  bossPrefab: {fileID: 4023390105349183420, guid: 6d732ff287563fd4a87482b8c119aa2d, type: 3}
+  exploderSpawnChance: 0.12
+  armoredSpawnChance: 0.13
+  spitterSpawnChance: 0.1
+  bossEveryRounds: 5
   spawnInterval: 2
   firstRoundZombies: 5
   extraZombiesPerRound: 3
   breakBetweenRounds: 3
+  healthIncreaseEveryRounds: 2
+  healthAddedPerStep: 1
+  speedIncreasePerRound: 0.05
+  maximumSpeedMultiplier: 1.8
+  spawnIntervalDecreasePerRound: 0.1
+  minimumSpawnInterval: 0.55
+  tankChanceIncreasePerRound: 0.02
+  maximumTankChance: 0.5
   minX: -8
   maxX: 8
   minY: -4
@@ -4198,7 +4214,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95a6d042880ad634bb64f9fc14ff212c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PerkMachine
-  perkType: 0
+  perkType: 1
   interactionDistance: 2
   machineRenderer: {fileID: 0}
 --- !u!61 &1750732399
@@ -4576,7 +4592,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95a6d042880ad634bb64f9fc14ff212c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PerkMachine
-  perkType: 0
+  perkType: 2
   interactionDistance: 2
   machineRenderer: {fileID: 0}
 --- !u!212 &1945873136
