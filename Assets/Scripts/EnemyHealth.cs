@@ -19,14 +19,14 @@ public class EnemyHealth : MonoBehaviour
 
     [Header("Power-Up Drops")]
     [Range(0f, 1f)] public float maxAmmoDropChance = 0.08f;
-    [Range(0f, 1f)] public float instaKillDropChance = 0.04f;
-    [Range(0f, 1f)] public float nukeDropChance = 0.02f;
+    [Range(0f, 1f)] public float instaKillDropChance = 0.008f;
+    [Range(0f, 1f)] public float nukeDropChance = 0.003f;
 
     private SpriteRenderer spriteRenderer;
     private Color normalColor;
     private bool isDead;
     private EnemySpawner roundOwner;
-    private static Sprite cachedBloodPoolSprite;
+    private static Sprite[] cachedBloodPoolSprites;
 
     public int CurrentHealth => health;
     public bool IsDead => isDead;
@@ -162,11 +162,10 @@ public class EnemyHealth : MonoBehaviour
 
     private void SpawnBloodPool()
     {
-        if (cachedBloodPoolSprite == null)
-            cachedBloodPoolSprite = Resources.Load<Sprite>("BloodPool");
-        if (cachedBloodPoolSprite == null)
+        Sprite bloodPoolSprite = GetBloodPoolSprite();
+        if (bloodPoolSprite == null)
         {
-            Debug.LogWarning("BloodPool sprite could not be loaded from Assets/Resources.", this);
+            Debug.LogWarning("BloodPool sprite could not be loaded from Assets/Resources/BloodPool.png.", this);
             return;
         }
 
@@ -175,20 +174,39 @@ public class EnemyHealth : MonoBehaviour
         pool.transform.rotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
 
         SpriteRenderer poolRenderer = pool.AddComponent<SpriteRenderer>();
-        poolRenderer.sprite = cachedBloodPoolSprite;
+        poolRenderer.sprite = bloodPoolSprite;
         if (spriteRenderer != null)
         {
             poolRenderer.sortingLayerID = spriteRenderer.sortingLayerID;
             poolRenderer.sortingOrder = spriteRenderer.sortingOrder - 1;
         }
 
-        float spriteWidth = Mathf.Max(0.01f, cachedBloodPoolSprite.bounds.size.x);
+        float spriteWidth = Mathf.Max(0.01f, bloodPoolSprite.bounds.size.x);
         float zombieSize = Mathf.Clamp(Mathf.Max(transform.lossyScale.x, transform.lossyScale.y), 1f, 1.6f);
         float scale = Mathf.Max(0.2f, bloodPoolWidth) * zombieSize / spriteWidth;
         pool.transform.localScale = Vector3.one * scale * Random.Range(0.9f, 1.1f);
 
         BloodPoolFade fade = pool.AddComponent<BloodPoolFade>();
         fade.Initialize(poolRenderer, bloodPoolDuration, bloodPoolFadeDuration);
+    }
+
+    private static Sprite GetBloodPoolSprite()
+    {
+        if (cachedBloodPoolSprites == null || cachedBloodPoolSprites.Length == 0)
+        {
+            cachedBloodPoolSprites = Resources.LoadAll<Sprite>("BloodPool");
+            if (cachedBloodPoolSprites == null || cachedBloodPoolSprites.Length == 0)
+            {
+                Sprite singleSprite = Resources.Load<Sprite>("BloodPool");
+                if (singleSprite != null)
+                    cachedBloodPoolSprites = new Sprite[] { singleSprite };
+            }
+        }
+
+        if (cachedBloodPoolSprites == null || cachedBloodPoolSprites.Length == 0)
+            return null;
+
+        return cachedBloodPoolSprites[0];
     }
 
     private void SpawnBlood()

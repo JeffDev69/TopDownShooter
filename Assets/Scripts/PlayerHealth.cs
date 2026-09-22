@@ -20,6 +20,7 @@ public class PlayerHealth : MonoBehaviour
     private Color normalColor;
     private Vector3 normalScale;
     private Coroutine hitEffectCoroutine;
+    private float incomingDamageMultiplier = 1f;
 
     void Start()
     {
@@ -39,7 +40,9 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        currentHealth -= damage;
+        int appliedDamage = Mathf.Max(1,
+            Mathf.CeilToInt(Mathf.Max(0, damage) * incomingDamageMultiplier - 0.001f));
+        currentHealth -= appliedDamage;
 
         Debug.Log("Player Health: " + currentHealth);
         UpdateHealthText();
@@ -88,6 +91,19 @@ public class PlayerHealth : MonoBehaviour
         if (HealthUpgradePurchased || currentHealth <= 0 || extraHearts <= 0) return false;
         HealthUpgradePurchased = true;
         maxHealth += extraHearts;
+        currentHealth = maxHealth;
+        UpdateHealthText();
+        return true;
+    }
+
+    public void ApplyArmorPerk()
+    {
+        incomingDamageMultiplier = Mathf.Min(incomingDamageMultiplier, 0.5f);
+    }
+
+    public bool HealToFull()
+    {
+        if (currentHealth <= 0 || currentHealth >= maxHealth) return false;
         currentHealth = maxHealth;
         UpdateHealthText();
         return true;

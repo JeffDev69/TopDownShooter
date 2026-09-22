@@ -49,6 +49,18 @@ public class PlayerPerks : MonoBehaviour
                 if (shooting == null) return false;
                 shooting.ApplyDoubleDamagePerk();
                 break;
+            case PerkMachine.PerkType.RapidFire:
+                if (shooting == null) return false;
+                shooting.ApplyRapidFirePerk();
+                break;
+            case PerkMachine.PerkType.ArmorPlating:
+                if (health == null) return false;
+                health.ApplyArmorPerk();
+                break;
+            case PerkMachine.PerkType.AmmoBelt:
+                if (shooting == null) return false;
+                shooting.ApplyAmmoBeltPerk();
+                break;
         }
         owned.Add(perk);
         UpdatePerkHud();
@@ -70,12 +82,12 @@ public class PlayerPerks : MonoBehaviour
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.anchoredPosition = new Vector2(20f, -140f);
-        rect.sizeDelta = new Vector2(520f, 190f);
+        rect.sizeDelta = new Vector2(520f, 300f);
 
         perkHud = hudObject.AddComponent<TextMeshProUGUI>();
         perkHud.raycastTarget = false;
         perkHud.richText = true;
-        perkHud.fontSize = 28f;
+        perkHud.fontSize = 24f;
         perkHud.alignment = TextAlignmentOptions.TopLeft;
         perkHud.margin = Vector4.zero;
 
@@ -96,6 +108,12 @@ public class PlayerPerks : MonoBehaviour
             text.AppendLine("<color=#55C7FF><b>[R] QUICK RELOAD</b></color>");
         if (HasPerk(PerkMachine.PerkType.DoubleDamage))
             text.AppendLine("<color=#D36AFF><b>[x2] DOUBLE DAMAGE</b></color>");
+        if (HasPerk(PerkMachine.PerkType.RapidFire))
+            text.AppendLine("<color=#FF9E45><b>[>>>] RAPID FIRE</b></color>");
+        if (HasPerk(PerkMachine.PerkType.ArmorPlating))
+            text.AppendLine("<color=#7FB7FF><b>[#] ARMOR PLATING</b></color>");
+        if (HasPerk(PerkMachine.PerkType.AmmoBelt))
+            text.AppendLine("<color=#62E5D1><b>[AMMO] AMMO BELT</b></color>");
 
         perkHud.text = text.ToString().TrimEnd();
         perkHud.gameObject.SetActive(text.Length > 0);

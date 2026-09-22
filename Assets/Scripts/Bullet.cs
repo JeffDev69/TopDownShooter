@@ -6,8 +6,11 @@ public class Bullet : MonoBehaviour
     public float speed = 5f;
     public float lifeTime = 3f;
     public int damage = 1;
+    [HideInInspector] public float explosionRadius;
+    [HideInInspector] public int explosionDamage;
 
     private Rigidbody2D rb;
+    private bool detonated;
 
     void Start()
     {
@@ -32,7 +35,13 @@ public class Bullet : MonoBehaviour
             return;
         }
 
-        EnemyHealth enemy = collision.gameObject.GetComponent<EnemyHealth>();
+        if (explosionRadius > 0f)
+        {
+            Explode();
+            return;
+        }
+
+        EnemyHealth enemy = collision.gameObject.GetComponentInParent<EnemyHealth>();
 
         if (enemy != null)
         {
@@ -42,6 +51,21 @@ public class Bullet : MonoBehaviour
         }
 
         // Destroy bullet when it hits something else, like a wall
+        Destroy(gameObject);
+    }
+
+    private void Explode()
+    {
+        if (detonated) return;
+        detonated = true;
+        var damagedEnemies = new System.Collections.Generic.HashSet<EnemyHealth>();
+        foreach (Collider2D hit in Physics2D.OverlapCircleAll(transform.position, explosionRadius))
+        {
+            EnemyHealth enemy = hit.GetComponentInParent<EnemyHealth>();
+            if (enemy == null || !damagedEnemies.Add(enemy)) continue;
+            enemy.TakeDamage(Mathf.Max(1, explosionDamage));
+        }
+        WeaponExplosionEffect.Spawn(transform.position, explosionRadius);
         Destroy(gameObject);
     }
 }

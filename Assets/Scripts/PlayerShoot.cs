@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
 // Regelt twee weapon slots, shooting, ammo, reloads, melee en de weapon HUD text.
 public class PlayerShoot : MonoBehaviour
 {
-    public enum WeaponType { Empty = -1, Pistol = 0, Shotgun, SMG, Sniper, AssaultRifle, DoubleBarrel, Minigun }
+    public enum WeaponType { Empty = -1, Pistol = 0, Shotgun, SMG, Sniper, AssaultRifle, DoubleBarrel, Minigun, BurstRifle, RocketLauncher, RayGun, Flamethrower }
     public GameObject bulletPrefab;
     public Transform firePoint;
     public float fireRate = 0.3f;
@@ -19,6 +20,7 @@ public class PlayerShoot : MonoBehaviour
     private int damageMultiplier = 1;
     private readonly int[] magazineAmmo = new int[2];
     private readonly int[] reserveAmmo = new int[2];
+    private int reserveMagazineMultiplier = 5;
     private bool reloading;
     private float reloadEndsAt;
     private float maxAmmoMessageUntil;
@@ -77,8 +79,33 @@ public class PlayerShoot : MonoBehaviour
     public float minigunSpread = 10f;
     public int minigunDamage = 1;
 
+    [Header("Burst Rifle")]
+    public int burstRifleDamage = 2;
+    public int burstShotCount = 3;
+    public float burstShotDelay = 0.09f;
+    public float burstRifleCooldown = 0.55f;
+
+    [Header("Rocket Launcher")]
+    public int rocketDamage = 8;
+    public float rocketExplosionRadius = 2.2f;
+    public float rocketFireRate = 1.4f;
+    public float rocketSpeedMultiplier = 0.8f;
+
+    [Header("Ray Gun")]
+    public int rayGunDamage = 4;
+    public float rayGunFireRate = 0.22f;
+    public float rayGunSpeedMultiplier = 2f;
+
+    [Header("Flamethrower")]
+    public int flamethrowerDamage = 1;
+    public float flamethrowerRange = 5f;
+    public float flamethrowerConeAngle = 42f;
+    public float flamethrowerFireRate = 0.12f;
+
     private float nextShotTime;
+    private bool bursting;
     private GunMuzzleFlash muzzleFlash;
+    private FlamethrowerVisual flamethrowerVisual;
     private readonly WeaponType[] weaponSlots = { WeaponType.Pistol, WeaponType.Empty };
     private int activeSlot;
     public WeaponType CurrentWeapon => weaponSlots[activeSlot];
@@ -91,6 +118,9 @@ public class PlayerShoot : MonoBehaviour
         {
             case WeaponType.AssaultRifle: return "ASSAULT RIFLE";
             case WeaponType.DoubleBarrel: return "DOUBLE BARREL";
+            case WeaponType.BurstRifle: return "BURST RIFLE";
+            case WeaponType.RocketLauncher: return "ROCKET LAUNCHER";
+            case WeaponType.RayGun: return "RAY GUN";
             default: return weapon.ToString().ToUpperInvariant();
         }
     }
@@ -99,6 +129,8 @@ public class PlayerShoot : MonoBehaviour
     {
         muzzleFlash = GetComponent<GunMuzzleFlash>();
         if (muzzleFlash == null) muzzleFlash = gameObject.AddComponent<GunMuzzleFlash>();
+        flamethrowerVisual = GetComponent<FlamethrowerVisual>();
+        if (flamethrowerVisual == null) flamethrowerVisual = gameObject.AddComponent<FlamethrowerVisual>();
         FillSlotAmmo(0);
         UpdateWeaponText();
     }
@@ -178,6 +210,18 @@ public class PlayerShoot : MonoBehaviour
             return;
         }
 
+        if (CurrentWeapon == WeaponType.BurstRifle)
+        {
+            if (!bursting) StartCoroutine(FireBurst(activeSlot));
+            return;
+        }
+
+        if (CurrentWeapon == WeaponType.Flamethrower)
+        {
+            FireFlamethrower();
+            return;
+        }
+
         // A shotgun volley consumes one shell, not one round per pellet.
         magazineAmmo[activeSlot]--;
         UpdateWeaponText();
@@ -226,13 +270,32 @@ public class PlayerShoot : MonoBehaviour
                     bullet.damage = Mathf.Max(1, assaultRifleDamage);
                 else if (CurrentWeapon == WeaponType.Minigun)
                     bullet.damage = Mathf.Max(1, minigunDamage);
+                else if (CurrentWeapon == WeaponType.RocketLauncher)
+                {
+                    bullet.damage = Mathf.Max(1, rocketDamage);
+                    bullet.speed *= Mathf.Max(0.1f, rocketSpeedMultiplier);
+                    bullet.explosionRadius = Mathf.Max(0.2f, rocketExplosionRadius);
+                }
+                else if (CurrentWeapon == WeaponType.RayGun)
+                {
+                    bullet.damage = Mathf.Max(1, rayGunDamage);
+                    bullet.speed *= Mathf.Max(0.1f, rayGunSpeedMultiplier);
+                }
                 else if (CurrentWeapon == WeaponType.Sniper)
                 {
                     bullet.damage = Mathf.Max(1, sniperDamage);
                     bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
                 }
                 bullet.damage = Mathf.Max(1, bullet.damage * damageMultiplier);
+                if (CurrentWeapon == WeaponType.RocketLauncher)
+                    bullet.explosionDamage = bullet.damage;
             }
+
+
+            if (CurrentWeapon == WeaponType.RocketLauncher)
+                ProjectileVisuals.Apply(projectile, new Color(1f, 0.35f, 0.04f, 1f), 1.8f, 0.35f);
+            else if (CurrentWeapon == WeaponType.RayGun)
+                ProjectileVisuals.Apply(projectile, new Color(0.25f, 1f, 0.35f, 1f), 1.35f, 0.22f);
 
             Collider2D[] projectileColliders = projectile.GetComponentsInChildren<Collider2D>();
             foreach (Collider2D projectileCollider in projectileColliders)
@@ -255,8 +318,86 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.AssaultRifle: delay = assaultRifleFireRate; break;
             case WeaponType.DoubleBarrel: delay = doubleBarrelFireRate; break;
             case WeaponType.Minigun: delay = minigunFireRate; break;
+            case WeaponType.RocketLauncher: delay = rocketFireRate; break;
+            case WeaponType.RayGun: delay = rayGunFireRate; break;
         }
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
+    }
+
+    private IEnumerator FireBurst(int slot)
+    {
+        bursting = true;
+        nextShotTime = Time.time + Mathf.Max(0.1f, burstRifleCooldown);
+        int shots = Mathf.Max(1, burstShotCount);
+
+        for (int i = 0; i < shots; i++)
+        {
+            if (activeSlot != slot || weaponSlots[slot] != WeaponType.BurstRifle ||
+                reloading || magazineAmmo[slot] <= 0) break;
+
+            magazineAmmo[slot]--;
+            UpdateWeaponText();
+            if (muzzleFlash != null) muzzleFlash.Show(firePoint, WeaponType.BurstRifle);
+
+            GameObject projectile = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+            Bullet bullet = projectile.GetComponent<Bullet>();
+            if (bullet != null)
+                bullet.damage = Mathf.Max(1, burstRifleDamage * damageMultiplier);
+            IgnoreProjectileCollisions(projectile);
+
+            if (i < shots - 1)
+                yield return new WaitForSeconds(Mathf.Max(0.02f, burstShotDelay));
+        }
+
+        bursting = false;
+    }
+
+    private void FireFlamethrower()
+    {
+        magazineAmmo[activeSlot]--;
+        nextShotTime = Time.time + Mathf.Max(0.05f, flamethrowerFireRate);
+        UpdateWeaponText();
+
+        Vector2 origin = firePoint.position;
+        Vector2 direction = ((Vector2)firePoint.right).normalized;
+        float range = Mathf.Max(0.5f, flamethrowerRange);
+        float halfAngle = Mathf.Clamp(flamethrowerConeAngle * 0.5f, 5f, 80f);
+        float minimumDot = Mathf.Cos(halfAngle * Mathf.Deg2Rad);
+        var damagedEnemies = new HashSet<EnemyHealth>();
+
+        foreach (Collider2D target in Physics2D.OverlapCircleAll(origin + direction * range * 0.5f, range * 0.7f))
+        {
+            EnemyHealth enemy = target.GetComponentInParent<EnemyHealth>();
+            if (enemy == null || !damagedEnemies.Add(enemy)) continue;
+
+            Vector2 toEnemy = (Vector2)enemy.transform.position - origin;
+            float distance = toEnemy.magnitude;
+            if (distance > range || distance < 0.01f || Vector2.Dot(direction, toEnemy / distance) < minimumDot)
+                continue;
+            if (MeleeBlocked(origin, target.ClosestPoint(origin))) continue;
+
+            enemy.TakeDamage(Mathf.Max(1, flamethrowerDamage * damageMultiplier));
+        }
+
+        if (flamethrowerVisual != null)
+            flamethrowerVisual.Show(firePoint, range, flamethrowerConeAngle);
+    }
+
+    private void IgnoreProjectileCollisions(GameObject projectile)
+    {
+        Collider2D[] projectileColliders = projectile.GetComponentsInChildren<Collider2D>();
+        foreach (Collider2D projectileCollider in projectileColliders)
+        {
+            foreach (Collider2D playerCollider in GetComponentsInChildren<Collider2D>())
+                Physics2D.IgnoreCollision(projectileCollider, playerCollider);
+
+            foreach (Bullet existingBullet in FindObjectsByType<Bullet>(FindObjectsSortMode.None))
+            {
+                if (existingBullet.gameObject == projectile) continue;
+                foreach (Collider2D otherBulletCollider in existingBullet.GetComponentsInChildren<Collider2D>())
+                    Physics2D.IgnoreCollision(projectileCollider, otherBulletCollider);
+            }
+        }
     }
 
     public void UnlockShotgun()
@@ -311,7 +452,7 @@ public class PlayerShoot : MonoBehaviour
 
     public WeaponType GiveRandomMysteryWeapon()
     {
-        WeaponType reward = (WeaponType)Random.Range(1, 7);
+        WeaponType reward = (WeaponType)Random.Range(1, (int)WeaponType.Flamethrower + 1);
         GiveWeapon(reward);
         return reward;
     }
@@ -339,6 +480,10 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.AssaultRifle: return 30;
             case WeaponType.DoubleBarrel: return 2;
             case WeaponType.Minigun: return 100;
+            case WeaponType.BurstRifle: return 24;
+            case WeaponType.RocketLauncher: return 4;
+            case WeaponType.RayGun: return 20;
+            case WeaponType.Flamethrower: return 60;
             default: return 0;
         }
     }
@@ -347,12 +492,12 @@ public class PlayerShoot : MonoBehaviour
     {
         int capacity = MagazineSize(weaponSlots[slot]);
         magazineAmmo[slot] = capacity;
-        reserveAmmo[slot] = capacity * 5;
+        reserveAmmo[slot] = capacity * reserveMagazineMultiplier;
     }
 
     private void BeginReload()
     {
-        if (reloading || reserveAmmo[activeSlot] <= 0 ||
+        if (reloading || bursting || reserveAmmo[activeSlot] <= 0 ||
             magazineAmmo[activeSlot] >= MagazineSize(CurrentWeapon)) return;
         reloading = true;
         reloadEndsAt = Time.time + Mathf.Max(0.1f, reloadDuration);
@@ -377,6 +522,29 @@ public class PlayerShoot : MonoBehaviour
     public void ApplyDoubleDamagePerk()
     {
         damageMultiplier = 2;
+    }
+
+    public void ApplyRapidFirePerk()
+    {
+        const float multiplier = 0.75f;
+        fireRate *= multiplier;
+        shotgunFireRate *= multiplier;
+        smgFireRate *= multiplier;
+        sniperFireRate *= multiplier;
+        assaultRifleFireRate *= multiplier;
+        doubleBarrelFireRate *= multiplier;
+        minigunFireRate *= multiplier;
+        burstShotDelay *= multiplier;
+        burstRifleCooldown *= multiplier;
+        rocketFireRate *= multiplier;
+        rayGunFireRate *= multiplier;
+        flamethrowerFireRate *= multiplier;
+    }
+
+    public void ApplyAmmoBeltPerk()
+    {
+        reserveMagazineMultiplier = Mathf.Max(reserveMagazineMultiplier, 8);
+        RefillAllAmmo();
     }
 
     public void ActivateInstaKill()

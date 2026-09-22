@@ -13,13 +13,25 @@ public class SpitterZombie : MonoBehaviour
     public int projectileDamage = 1;
     public float spriteAngleOffset = 90f;
 
+    [Header("Crowd Steering")]
+    public float personalSpace = 1.1f;
+    public float crowdLookRadius = 2.5f;
+    public float separationStrength = 3.2f;
+    public float laneStrength = 0.75f;
+    public float passStrength = 1.1f;
+    public float yieldStrength = 1.2f;
+    public float velocitySmoothing = 10f;
+
     private Transform player;
     private Rigidbody2D body;
+    private Collider2D[] ownColliders;
     private float nextShotTime;
+    private float laneSide;
 
     void Awake()
     {
         body = GetComponent<Rigidbody2D>();
+        ownColliders = GetComponentsInChildren<Collider2D>();
         EnemyMovement normalMovement = GetComponent<EnemyMovement>();
         if (normalMovement != null) normalMovement.enabled = false;
     }
@@ -29,6 +41,7 @@ public class SpitterZombie : MonoBehaviour
         GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
         if (playerObject != null) player = playerObject.transform;
         nextShotTime = Time.time + Random.Range(0.4f, Mathf.Max(0.5f, shootInterval));
+        laneSide = (Mathf.Abs(gameObject.GetHashCode()) & 1) == 0 ? 1f : -1f;
     }
 
     void Update()
@@ -49,12 +62,56 @@ public class SpitterZombie : MonoBehaviour
         float distance = toPlayer.magnitude;
         Vector2 direction = distance > 0.01f ? toPlayer / distance : Vector2.zero;
 
+        Vector2 desiredDirection = Vector2.zero;
+        float desiredSpeed = 0f;
         if (distance > preferredDistance)
-            body.linearVelocity = direction * moveSpeed;
+        {
+            desiredDirection = direction;
+            desiredSpeed = moveSpeed;
+        }
         else if (distance < retreatDistance)
-            body.linearVelocity = -direction * moveSpeed;
+        {
+            desiredDirection = -direction;
+            desiredSpeed = moveSpeed;
+        }
+
+        Vector2 crowdForward = desiredDirection.sqrMagnitude > 0.001f
+            ? desiredDirection.normalized
+            : direction;
+        float speedScale;
+        Vector2 crowdSteering = EnemyMovement.CalculateCrowdSteering(
+            gameObject,
+            body,
+            ownColliders,
+            transform.position,
+            crowdForward,
+            moveSpeed,
+            CurrentPersonalSpace,
+            crowdLookRadius,
+            separationStrength,
+            laneSide,
+            laneStrength,
+            passStrength,
+            yieldStrength,
+            out speedScale);
+
+        if (desiredDirection.sqrMagnitude > 0.001f)
+        {
+            desiredDirection += crowdSteering;
+        }
         else
-            body.linearVelocity = Vector2.zero;
+        {
+            desiredDirection = crowdSteering;
+            desiredSpeed = crowdSteering.sqrMagnitude > 0.001f ? moveSpeed * 0.75f : 0f;
+        }
+
+        if (desiredDirection.sqrMagnitude > 0.001f)
+            desiredDirection.Normalize();
+
+        Vector2 targetVelocity = desiredDirection * desiredSpeed * speedScale;
+        float smoothing = 1f - Mathf.Exp(-Mathf.Max(0f, velocitySmoothing) * Time.fixedDeltaTime);
+        body.linearVelocity = Vector2.Lerp(body.linearVelocity, targetVelocity, smoothing);
+        body.angularVelocity = 0f;
 
         if (direction != Vector2.zero)
         {
@@ -62,4 +119,9 @@ public class SpitterZombie : MonoBehaviour
             body.SetRotation(angle + spriteAngleOffset);
         }
     }
+
+    public float CurrentCrowdSpeed => moveSpeed;
+
+    public float CurrentPersonalSpace =>
+        personalSpace * Mathf.Max(1f, transform.lossyScale.x, transform.lossyScale.y);
 }

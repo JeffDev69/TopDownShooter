@@ -8,7 +8,6 @@ public class ExploderZombie : MonoBehaviour
     public float triggerDistance = 1.1f;
     public float explosionRadius = 2f;
     public int explosionDamage = 2;
-
     [Header("Warning Effect")]
     public float fuseDuration = 0.9f;
     public float warningFlashSpeed = 10f;

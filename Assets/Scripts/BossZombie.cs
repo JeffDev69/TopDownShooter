@@ -9,7 +9,6 @@ public class BossZombie : MonoBehaviour
     public float sizeMultiplier = 1.5f;
     public float enragedSpeedMultiplier = 1.35f;
     public int contactDamage = 2;
-
     private EnemyHealth health;
     private EnemyMovement movement;
     private int startingHealth;
@@ -31,6 +30,8 @@ public class BossZombie : MonoBehaviour
     {
         // Start runs after de spawner zijn round health heeft toegevoegd.
         startingHealth = health.health;
+        if (GetComponent<BossHealthBar>() == null)
+            gameObject.AddComponent<BossHealthBar>();
     }
 
     void Update()

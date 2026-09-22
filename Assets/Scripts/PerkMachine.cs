@@ -2,10 +2,20 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// Reusable machine waarmee de player health, movement, reload en damage perks kan kopen.
+// Reusable machine waarmee de player permanent perks kan kopen.
 public class PerkMachine : MonoBehaviour
 {
-    public enum PerkType { VitalityBrew, StaminaRush, QuickReload, DoubleDamage }
+    // Nieuwe perks staan achteraan zodat bestaande scene values hetzelfde blijven.
+    public enum PerkType
+    {
+        VitalityBrew,
+        StaminaRush,
+        QuickReload,
+        DoubleDamage,
+        RapidFire,
+        ArmorPlating,
+        AmmoBelt
+    }
     public PerkType perkType;
     public float interactionDistance = 2f;
     public SpriteRenderer machineRenderer;
@@ -20,7 +30,10 @@ public class PerkMachine : MonoBehaviour
         PerkType.VitalityBrew => "VITALITY BREW",
         PerkType.StaminaRush => "STAMINA RUSH",
         PerkType.QuickReload => "QUICK RELOAD",
-        _ => "DOUBLE DAMAGE"
+        PerkType.DoubleDamage => "DOUBLE DAMAGE",
+        PerkType.RapidFire => "RAPID FIRE",
+        PerkType.ArmorPlating => "ARMOR PLATING",
+        _ => "AMMO BELT"
     };
 
     private int Price => perkType switch
@@ -28,7 +41,10 @@ public class PerkMachine : MonoBehaviour
         PerkType.VitalityBrew => 500,
         PerkType.StaminaRush => 400,
         PerkType.QuickReload => 450,
-        _ => 600
+        PerkType.DoubleDamage => 600,
+        PerkType.RapidFire => 650,
+        PerkType.ArmorPlating => 700,
+        _ => 500
     };
 
     private string Effect => perkType switch
@@ -36,7 +52,10 @@ public class PerkMachine : MonoBehaviour
         PerkType.VitalityBrew => "+3 HEARTS + FULL HEAL",
         PerkType.StaminaRush => "+35% MOVEMENT SPEED",
         PerkType.QuickReload => "50% FASTER RELOAD",
-        _ => "DOUBLE BULLET DAMAGE"
+        PerkType.DoubleDamage => "DOUBLE BULLET DAMAGE",
+        PerkType.RapidFire => "25% FASTER FIRE RATE",
+        PerkType.ArmorPlating => "50% LESS DAMAGE",
+        _ => "+60% RESERVE AMMO + REFILL"
     };
 
     private void Start()

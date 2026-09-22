@@ -170,6 +170,8 @@ public class EnemySpawner : MonoBehaviour
             SpitterZombie spitter = zombie.GetComponent<SpitterZombie>();
             if (spitter != null)
                 spitter.moveSpeed *= speedMultiplier;
+
+            ZombieSpawnEffect.Play(zombie);
         }
     }
 
