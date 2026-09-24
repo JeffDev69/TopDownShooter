@@ -20,6 +20,7 @@ public class PlayerShoot : MonoBehaviour
     private int damageMultiplier = 1;
     private readonly int[] magazineAmmo = new int[2];
     private readonly int[] reserveAmmo = new int[2];
+    private readonly bool[] packedWeaponSlots = new bool[2];
     private int reserveMagazineMultiplier = 5;
     private bool reloading;
     private float reloadEndsAt;
@@ -102,6 +103,11 @@ public class PlayerShoot : MonoBehaviour
     public float flamethrowerConeAngle = 42f;
     public float flamethrowerFireRate = 0.12f;
 
+    [Header("Pack-a-Punch")]
+    public float packedDamageMultiplier = 2f;
+    public float packedMagazineMultiplier = 1.5f;
+    public float packedFireRateMultiplier = 0.85f;
+
     private float nextShotTime;
     private bool bursting;
     private GunMuzzleFlash muzzleFlash;
@@ -109,6 +115,7 @@ public class PlayerShoot : MonoBehaviour
     private readonly WeaponType[] weaponSlots = { WeaponType.Pistol, WeaponType.Empty };
     private int activeSlot;
     public WeaponType CurrentWeapon => weaponSlots[activeSlot];
+    public bool CurrentWeaponPacked => packedWeaponSlots[activeSlot];
     public string LoadoutText => "1: " + GetWeaponName(weaponSlots[0])
         + " | 2: " + GetWeaponName(weaponSlots[1]);
 
@@ -161,7 +168,7 @@ public class PlayerShoot : MonoBehaviour
 
         if (reloading && Time.time >= reloadEndsAt)
         {
-            int needed = MagazineSize(CurrentWeapon) - magazineAmmo[activeSlot];
+            int needed = MagazineSizeForSlot(activeSlot) - magazineAmmo[activeSlot];
             int transferred = Mathf.Min(needed, reserveAmmo[activeSlot]);
             magazineAmmo[activeSlot] += transferred;
             reserveAmmo[activeSlot] -= transferred;
@@ -286,7 +293,7 @@ public class PlayerShoot : MonoBehaviour
                     bullet.damage = Mathf.Max(1, sniperDamage);
                     bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
                 }
-                bullet.damage = Mathf.Max(1, bullet.damage * damageMultiplier);
+                bullet.damage = ModifiedDamage(bullet.damage, activeSlot);
                 if (CurrentWeapon == WeaponType.RocketLauncher)
                     bullet.explosionDamage = bullet.damage;
             }
@@ -296,6 +303,8 @@ public class PlayerShoot : MonoBehaviour
                 ProjectileVisuals.Apply(projectile, new Color(1f, 0.35f, 0.04f, 1f), 1.8f, 0.35f);
             else if (CurrentWeapon == WeaponType.RayGun)
                 ProjectileVisuals.Apply(projectile, new Color(0.25f, 1f, 0.35f, 1f), 1.35f, 0.22f);
+            else if (CurrentWeaponPacked)
+                ProjectileVisuals.Apply(projectile, new Color(0.95f, 0.25f, 1f, 1f), 1.2f, 0.18f);
 
             Collider2D[] projectileColliders = projectile.GetComponentsInChildren<Collider2D>();
             foreach (Collider2D projectileCollider in projectileColliders)
@@ -321,13 +330,18 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.RocketLauncher: delay = rocketFireRate; break;
             case WeaponType.RayGun: delay = rayGunFireRate; break;
         }
+        if (CurrentWeaponPacked)
+            delay *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
     }
 
     private IEnumerator FireBurst(int slot)
     {
         bursting = true;
-        nextShotTime = Time.time + Mathf.Max(0.1f, burstRifleCooldown);
+        float cooldown = burstRifleCooldown;
+        if (packedWeaponSlots[slot])
+            cooldown *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
+        nextShotTime = Time.time + Mathf.Max(0.1f, cooldown);
         int shots = Mathf.Max(1, burstShotCount);
 
         for (int i = 0; i < shots; i++)
@@ -342,7 +356,9 @@ public class PlayerShoot : MonoBehaviour
             GameObject projectile = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
             Bullet bullet = projectile.GetComponent<Bullet>();
             if (bullet != null)
-                bullet.damage = Mathf.Max(1, burstRifleDamage * damageMultiplier);
+                bullet.damage = ModifiedDamage(burstRifleDamage, slot);
+            if (packedWeaponSlots[slot])
+                ProjectileVisuals.Apply(projectile, new Color(0.95f, 0.25f, 1f, 1f), 1.2f, 0.18f);
             IgnoreProjectileCollisions(projectile);
 
             if (i < shots - 1)
@@ -355,7 +371,10 @@ public class PlayerShoot : MonoBehaviour
     private void FireFlamethrower()
     {
         magazineAmmo[activeSlot]--;
-        nextShotTime = Time.time + Mathf.Max(0.05f, flamethrowerFireRate);
+        float delay = flamethrowerFireRate;
+        if (CurrentWeaponPacked)
+            delay *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
+        nextShotTime = Time.time + Mathf.Max(0.05f, delay);
         UpdateWeaponText();
 
         Vector2 origin = firePoint.position;
@@ -376,7 +395,7 @@ public class PlayerShoot : MonoBehaviour
                 continue;
             if (MeleeBlocked(origin, target.ClosestPoint(origin))) continue;
 
-            enemy.TakeDamage(Mathf.Max(1, flamethrowerDamage * damageMultiplier));
+            enemy.TakeDamage(ModifiedDamage(flamethrowerDamage, activeSlot));
         }
 
         if (flamethrowerVisual != null)
@@ -464,6 +483,7 @@ public class PlayerShoot : MonoBehaviour
             activeSlot = 1;
 
         weaponSlots[activeSlot] = weapon;
+        packedWeaponSlots[activeSlot] = false;
         reloading = false;
         FillSlotAmmo(activeSlot);
         UpdateWeaponText();
@@ -490,7 +510,7 @@ public class PlayerShoot : MonoBehaviour
 
     private void FillSlotAmmo(int slot)
     {
-        int capacity = MagazineSize(weaponSlots[slot]);
+        int capacity = MagazineSizeForSlot(slot);
         magazineAmmo[slot] = capacity;
         reserveAmmo[slot] = capacity * reserveMagazineMultiplier;
     }
@@ -498,10 +518,30 @@ public class PlayerShoot : MonoBehaviour
     private void BeginReload()
     {
         if (reloading || bursting || reserveAmmo[activeSlot] <= 0 ||
-            magazineAmmo[activeSlot] >= MagazineSize(CurrentWeapon)) return;
+            magazineAmmo[activeSlot] >= MagazineSizeForSlot(activeSlot)) return;
         reloading = true;
         reloadEndsAt = Time.time + Mathf.Max(0.1f, reloadDuration);
         UpdateWeaponText();
+    }
+
+    public bool CanPackCurrentWeapon()
+    {
+        return CurrentWeapon != WeaponType.Empty && !CurrentWeaponPacked;
+    }
+
+    public bool PackCurrentWeapon()
+    {
+        if (!CanPackCurrentWeapon())
+            return false;
+
+        packedWeaponSlots[activeSlot] = true;
+        reloading = false;
+        FillSlotAmmo(activeSlot);
+        powerUpMessage = "PACK-A-PUNCH!";
+        showingMaxAmmo = true;
+        maxAmmoMessageUntil = Time.time + 2f;
+        UpdateWeaponText();
+        return true;
     }
 
     public void RefillAllAmmo()
@@ -591,7 +631,8 @@ public class PlayerShoot : MonoBehaviour
         bool selected = slot == activeSlot;
         string color = selected ? "#17202E" : "#535969";
         string marker = selected ? "> " : "  ";
-        string label = marker + "[" + (slot + 1) + "]  " + GetWeaponName(weaponSlots[slot]);
+        string packedPrefix = packedWeaponSlots[slot] ? "[PAP] " : "";
+        string label = marker + "[" + (slot + 1) + "]  " + packedPrefix + GetWeaponName(weaponSlots[slot]);
         if (weaponSlots[slot] != WeaponType.Empty)
         {
             label += "  " + magazineAmmo[slot] + "/" + reserveAmmo[slot];
@@ -601,5 +642,23 @@ public class PlayerShoot : MonoBehaviour
                 label += reserveAmmo[slot] > 0 ? "  [R] RELOAD" : "  [V] MELEE";
         }
         return "<color=" + color + ">" + (selected ? "<b>" + label + "</b>" : label) + "</color>";
+    }
+
+    private int MagazineSizeForSlot(int slot)
+    {
+        int baseSize = MagazineSize(weaponSlots[slot]);
+        if (!packedWeaponSlots[slot])
+            return baseSize;
+
+        return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * Mathf.Max(1f, packedMagazineMultiplier)));
+    }
+
+    private int ModifiedDamage(int baseDamage, int slot)
+    {
+        float multiplier = damageMultiplier;
+        if (packedWeaponSlots[slot])
+            multiplier *= Mathf.Max(1f, packedDamageMultiplier);
+
+        return Mathf.Max(1, Mathf.CeilToInt(baseDamage * multiplier));
     }
 }

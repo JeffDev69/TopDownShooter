@@ -19,8 +19,12 @@ public class EnemyHealth : MonoBehaviour
 
     [Header("Power-Up Drops")]
     [Range(0f, 1f)] public float maxAmmoDropChance = 0.08f;
-    [Range(0f, 1f)] public float instaKillDropChance = 0.008f;
-    [Range(0f, 1f)] public float nukeDropChance = 0.003f;
+    [Range(0f, 1f)] public float instaKillDropChance = 0.002f;
+    [Range(0f, 1f)] public float nukeDropChance = 0.0008f;
+
+    [Header("Power-Up Resistance")]
+    public bool immuneToInstaKill;
+    public bool immuneToNuke;
 
     private SpriteRenderer spriteRenderer;
     private Color normalColor;
@@ -54,7 +58,7 @@ public class EnemyHealth : MonoBehaviour
             return;
         }
 
-        if (damage > 0 && PlayerShoot.InstaKillActive)
+        if (damage > 0 && PlayerShoot.InstaKillActive && !immuneToInstaKill)
             health = 0;
         else
             health -= Mathf.Max(1, Mathf.CeilToInt(damage * incomingDamageMultiplier));
@@ -82,6 +86,17 @@ public class EnemyHealth : MonoBehaviour
     public void KillFromNuke()
     {
         if (isDead) return;
+        if (immuneToNuke)
+        {
+            SpawnBlood();
+            if (spriteRenderer != null)
+            {
+                StopAllCoroutines();
+                StartCoroutine(FlashWhenHit());
+            }
+            return;
+        }
+
         health = 0;
         StopAllCoroutines();
         SpawnBlood();

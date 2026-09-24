@@ -11,6 +11,7 @@ public class Bullet : MonoBehaviour
 
     private Rigidbody2D rb;
     private bool detonated;
+    private bool destroyedByHit;
 
     void Start()
     {
@@ -22,35 +23,51 @@ public class Bullet : MonoBehaviour
             return;
         }
 
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        rb.gravityScale = 0f;
         rb.linearVelocity = transform.right * speed;
+        foreach (Collider2D bulletCollider in GetComponentsInChildren<Collider2D>())
+            bulletCollider.isTrigger = true;
 
         Destroy(gameObject, lifeTime);
     }
 
     void OnCollisionEnter2D(Collision2D collision)
     {
+        HandleHit(collision.gameObject);
+    }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        HandleHit(other.gameObject);
+    }
+
+    private void HandleHit(GameObject hitObject)
+    {
+        if (destroyedByHit || hitObject == null) return;
+
         // Do not destroy the bullet if it touches the player
-        if (collision.gameObject.CompareTag("Player"))
-        {
+        if (hitObject.CompareTag("Player"))
             return;
-        }
 
         if (explosionRadius > 0f)
         {
+            destroyedByHit = true;
             Explode();
             return;
         }
 
-        EnemyHealth enemy = collision.gameObject.GetComponentInParent<EnemyHealth>();
-
+        EnemyHealth enemy = hitObject.GetComponentInParent<EnemyHealth>();
         if (enemy != null)
         {
+            destroyedByHit = true;
             enemy.TakeDamage(damage);
             Destroy(gameObject);
             return;
         }
 
         // Destroy bullet when it hits something else, like a wall
+        destroyedByHit = true;
         Destroy(gameObject);
     }
 

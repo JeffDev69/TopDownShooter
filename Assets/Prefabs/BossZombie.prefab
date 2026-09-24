@@ -75,7 +75,7 @@ PrefabInstance:
     - target: {fileID: 8890763238356730443, guid: 1cab5173016dcca4591f356638cb44ca, type: 3}
       propertyPath: m_Sprite
       value: 
-      objectReference: {fileID: 21300000, guid: dd5dd327a2234194da2eb5994c9caf14, type: 3}
+      objectReference: {fileID: 21300000, guid: e3f8edcd0a8944d99dc6835595d7063e, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -101,8 +101,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec8111b98c230f14fb6e8dbb831a09c9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossZombie
-  bonusHealth: 30
+  bonusHealth: 120
+  minimumHealth: 160
   bonusCoins: 90
-  sizeMultiplier: 1.5
-  enragedSpeedMultiplier: 1.35
-  contactDamage: 2
+  sizeMultiplier: 1.65
+  damageTakenMultiplier: 0.55
+  enragedSpeedMultiplier: 1.55
+  contactDamage: 3

@@ -4,11 +4,13 @@ using UnityEngine;
 [RequireComponent(typeof(EnemyHealth))]
 public class BossZombie : MonoBehaviour
 {
-    public int bonusHealth = 30;
+    public int bonusHealth = 120;
+    public int minimumHealth = 160;
     public int bonusCoins = 90;
-    public float sizeMultiplier = 1.5f;
-    public float enragedSpeedMultiplier = 1.35f;
-    public int contactDamage = 2;
+    public float sizeMultiplier = 1.65f;
+    [Range(0.05f, 1f)] public float damageTakenMultiplier = 0.55f;
+    public float enragedSpeedMultiplier = 1.55f;
+    public int contactDamage = 3;
     private EnemyHealth health;
     private EnemyMovement movement;
     private int startingHealth;
@@ -19,7 +21,13 @@ public class BossZombie : MonoBehaviour
         health = GetComponent<EnemyHealth>();
         movement = GetComponent<EnemyMovement>();
         health.health += Mathf.Max(0, bonusHealth);
+        health.health = Mathf.Max(health.health, Mathf.Max(1, minimumHealth));
         health.coinsOnDeath += Mathf.Max(0, bonusCoins);
+        health.incomingDamageMultiplier = Mathf.Min(
+            health.incomingDamageMultiplier,
+            Mathf.Clamp(damageTakenMultiplier, 0.05f, 1f));
+        health.immuneToInstaKill = true;
+        health.immuneToNuke = true;
         transform.localScale *= Mathf.Max(1f, sizeMultiplier);
 
         if (movement != null)

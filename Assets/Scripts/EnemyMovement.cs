@@ -9,17 +9,13 @@ public class EnemyMovement : MonoBehaviour
     public float spriteAngleOffset = 90f;
 
     [Header("Crowd Steering")]
-    public float personalSpace = 0.75f;
-    public float crowdLookRadius = 2.3f;
-    public float separationStrength = 3.4f;
-    public float laneStrength = 0.55f;
-    public float passStrength = 1.7f;
-    public float yieldStrength = 1.1f;
-    public float velocitySmoothing = 12f;
-    public float closeFormationRange = 5f;
-    public float formationInnerRadius = 0.45f;
-    public float formationLayerSpacing = 0.65f;
-    public float formationSideSpacing = 0.55f;
+    public float personalSpace = 0.45f;
+    public float crowdLookRadius = 1.25f;
+    public float separationStrength = 0.9f;
+    public float laneStrength = 0.25f;
+    public float passStrength = 0.35f;
+    public float yieldStrength = 0.25f;
+    public float velocitySmoothing = 18f;
 
     private const int MaxCrowdHits = 24;
     private static readonly Collider2D[] CrowdHits = new Collider2D[MaxCrowdHits];
@@ -34,7 +30,6 @@ public class EnemyMovement : MonoBehaviour
 
     private float nextDamageTime;
     private float laneSide;
-    private int formationLayer;
 
     void Start()
     {
@@ -50,13 +45,6 @@ public class EnemyMovement : MonoBehaviour
         ownColliders = GetComponentsInChildren<Collider2D>();
         int stableSeed = Mathf.Abs(gameObject.GetHashCode());
         laneSide = StableLaneSide(stableSeed);
-        int layerRoll = stableSeed % 6;
-        if (layerRoll < 2)
-            formationLayer = 0;
-        else if (layerRoll < 4)
-            formationLayer = 1;
-        else
-            formationLayer = layerRoll - 3;
     }
 
     void FixedUpdate()
@@ -78,19 +66,13 @@ public class EnemyMovement : MonoBehaviour
             return;
         }
 
-        Vector2 goalDirection = CalculateApproachLaneDirection(
-            transform.position,
-            player.position,
-            direction,
-            distanceToPlayer);
-
         float speedScale;
         Vector2 crowdSteering = CalculateCrowdSteering(
             gameObject,
             rb,
             ownColliders,
             transform.position,
-            goalDirection,
+            direction,
             moveSpeed,
             CurrentPersonalSpace,
             crowdLookRadius,
@@ -101,12 +83,16 @@ public class EnemyMovement : MonoBehaviour
             yieldStrength,
             out speedScale);
 
-        Vector2 moveDirection = goalDirection + crowdSteering;
+        Vector2 moveDirection = direction + crowdSteering;
 
         if (moveDirection.sqrMagnitude < 0.001f)
             moveDirection = direction;
         else
+        {
             moveDirection.Normalize();
+            if (Vector2.Dot(moveDirection, direction) < 0.75f)
+                moveDirection = Vector2.Lerp(moveDirection, direction, 0.7f).normalized;
+        }
 
         Vector2 targetVelocity = moveDirection * moveSpeed * speedScale;
         float smoothing = 1f - Mathf.Exp(-Mathf.Max(0f, velocitySmoothing) * Time.fixedDeltaTime);
@@ -171,7 +157,7 @@ public class EnemyMovement : MonoBehaviour
             {
                 float crowding = 1f - distance / desiredClearance;
                 steering -= toOtherDirection * crowding * crowding * separationStrength;
-                speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.35f, 0.9f, distance / desiredClearance));
+                speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.75f, 1f, distance / desiredClearance));
             }
 
             float aheadAmount = Vector2.Dot(forward, toOtherDirection);
@@ -189,7 +175,7 @@ public class EnemyMovement : MonoBehaviour
                 }
                 else if (distance < desiredClearance * 1.25f)
                 {
-                    speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.45f, 1f, distance / (desiredClearance * 1.25f)));
+                    speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.85f, 1f, distance / (desiredClearance * 1.25f)));
                     steering += side * sideChoice * closeness * laneStrength;
                 }
             }
@@ -198,11 +184,11 @@ public class EnemyMovement : MonoBehaviour
                 float otherSide = Cross(forward, toOtherDirection);
                 float sideChoice = Mathf.Abs(otherSide) > 0.05f ? -Mathf.Sign(otherSide) : Mathf.Sign(laneSide);
                 steering += side * sideChoice * closeness * yieldStrength;
-                speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.7f, 1f, distance / Mathf.Max(0.01f, lookRadius)));
+                speedScale = Mathf.Min(speedScale, Mathf.Lerp(0.9f, 1f, distance / Mathf.Max(0.01f, lookRadius)));
             }
         }
 
-        return Vector2.ClampMagnitude(steering, 1.8f);
+        return Vector2.ClampMagnitude(steering, 0.55f);
     }
 
     private static bool TryGetCrowdAgent(
@@ -257,30 +243,6 @@ public class EnemyMovement : MonoBehaviour
         }
 
         return false;
-    }
-
-    private Vector2 CalculateApproachLaneDirection(
-        Vector2 position,
-        Vector2 playerPosition,
-        Vector2 directDirection,
-        float distanceToPlayer)
-    {
-        float formationInfluence = 1f - Mathf.Clamp01(
-            (distanceToPlayer - 1.15f) / Mathf.Max(0.01f, closeFormationRange - 1.15f));
-        if (formationInfluence <= 0.01f)
-            return directDirection;
-
-        Vector2 side = Perpendicular(directDirection);
-        float layerDepth = formationInnerRadius + formationLayer * formationLayerSpacing;
-        float sideOffset = laneSide * formationSideSpacing * (formationLayer + 0.65f);
-        Vector2 laneTarget = playerPosition - directDirection * layerDepth + side * sideOffset;
-        Vector2 toLaneTarget = laneTarget - position;
-
-        if (toLaneTarget.sqrMagnitude < 0.001f)
-            return directDirection;
-
-        Vector2 blendedDirection = Vector2.Lerp(directDirection, toLaneTarget.normalized, formationInfluence);
-        return blendedDirection.sqrMagnitude > 0.001f ? blendedDirection.normalized : directDirection;
     }
 
     private static void IgnoreEnemyCollision(Collider2D[] ownerColliders, Collider2D otherCollider)

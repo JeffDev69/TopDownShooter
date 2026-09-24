@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Geeft bestaande machines hun juiste sprite, maar spawnt zelf geen nieuwe machines.
+// Geeft bestaande machines hun juiste sprite.
 public static class MachineAutoSetup
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -19,6 +19,9 @@ public static class MachineAutoSetup
 
         foreach (HealthMachine machine in Object.FindObjectsByType<HealthMachine>())
             PrepareVisual(machine.gameObject, "HealthStation");
+
+        foreach (PackAPunchMachine machine in Object.FindObjectsByType<PackAPunchMachine>())
+            PreparePackAPunchVisual(machine);
     }
 
     private static void ConfigureMachineFromSprite(SpriteRenderer renderer)
@@ -26,6 +29,15 @@ public static class MachineAutoSetup
         if (renderer == null || renderer.sprite == null) return;
 
         string spriteName = renderer.sprite.name;
+        if (spriteName == "PackAPunchMachine" || spriteName == "PackAPunchMachine_0")
+        {
+            PackAPunchMachine packAPunch = renderer.GetComponent<PackAPunchMachine>();
+            if (packAPunch == null)
+                packAPunch = renderer.gameObject.AddComponent<PackAPunchMachine>();
+            packAPunch.machineRenderer = renderer;
+            return;
+        }
+
         if (spriteName == "HealthStation")
         {
             HealthMachine healthMachine = renderer.GetComponent<HealthMachine>();
@@ -94,5 +106,20 @@ public static class MachineAutoSetup
         Animator animator = machine.GetComponent<Animator>();
         if (animator != null)
             animator.enabled = false;
+    }
+
+    private static void PreparePackAPunchVisual(PackAPunchMachine machine)
+    {
+        if (machine == null) return;
+
+        SpriteRenderer renderer = machine.machineRenderer;
+        if (renderer == null)
+            renderer = machine.GetComponent<SpriteRenderer>();
+        if (renderer == null)
+            renderer = machine.gameObject.AddComponent<SpriteRenderer>();
+
+        renderer.color = Color.white;
+        renderer.sortingOrder = Mathf.Max(renderer.sortingOrder, 20);
+        machine.machineRenderer = renderer;
     }
 }
