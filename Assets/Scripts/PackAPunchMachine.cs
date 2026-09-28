@@ -5,7 +5,9 @@ using UnityEngine.InputSystem;
 // Machine waarmee de player het huidige wapen permanent sterker maakt.
 public class PackAPunchMachine : MonoBehaviour
 {
-    public int price = 1500;
+    public int tierOnePrice = 1500;
+    public int tierTwoPrice = 3000;
+    public int tierThreePrice = 5000;
     public float interactionDistance = 2f;
     public SpriteRenderer machineRenderer;
 
@@ -83,11 +85,12 @@ public class PackAPunchMachine : MonoBehaviour
         {
             ShowMessage(player.CurrentWeapon == PlayerShoot.WeaponType.Empty
                 ? "<color=#FF7373>NO WEAPON TO PACK</color>"
-                : "<color=#73FF91>ALREADY PACKED</color>");
+                : "<color=#73FF91>MAX PACK-A-PUNCH</color>");
             messageUntil = Time.time + 2f;
             return;
         }
 
+        int price = CurrentPrice();
         if (CoinManager.Instance == null || !CoinManager.Instance.TrySpendCoins(price))
         {
             ShowMessage("<color=#FF7373>NEED " + price + " COINS</color>");
@@ -96,7 +99,7 @@ public class PackAPunchMachine : MonoBehaviour
         }
 
         player.PackCurrentWeapon();
-        ShowMessage("<color=#73FF91>PACKED " + PlayerShoot.GetWeaponName(player.CurrentWeapon) + "!</color>");
+        ShowMessage("<color=#73FF91>" + player.CurrentWeaponFullName + "!</color>");
         messageUntil = Time.time + 2f;
     }
 
@@ -105,12 +108,24 @@ public class PackAPunchMachine : MonoBehaviour
         if (player.CurrentWeapon == PlayerShoot.WeaponType.Empty)
             return "<color=#FF7373>NO WEAPON TO PACK</color>";
 
-        if (player.CurrentWeaponPacked)
-            return "<color=#73FF91>" + PlayerShoot.GetWeaponName(player.CurrentWeapon) + " PACKED</color>\n"
+        if (!player.CanPackCurrentWeapon())
+            return "<color=#73FF91>" + player.CurrentWeaponFullName + " MAXED</color>\n"
                 + player.LoadoutText;
 
+        int nextTier = player.CurrentPackTier + 1;
+        int price = CurrentPrice();
         return "<color=#F05CFF>[E] PACK-A-PUNCH - " + price + " COINS</color>\n"
-            + player.LoadoutText + "\nHOLDING: " + PlayerShoot.GetWeaponName(player.CurrentWeapon);
+            + player.LoadoutText + "\nUPGRADE TO PAP " + nextTier + ": " + player.CurrentWeaponFullName;
+    }
+
+    private int CurrentPrice()
+    {
+        switch (player.CurrentPackTier)
+        {
+            case 0: return Mathf.Max(0, tierOnePrice);
+            case 1: return Mathf.Max(0, tierTwoPrice);
+            default: return Mathf.Max(0, tierThreePrice);
+        }
     }
 
     private void ShowMessage(string message)

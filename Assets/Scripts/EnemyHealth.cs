@@ -36,6 +36,13 @@ public class EnemyHealth : MonoBehaviour
     public bool IsDead => isDead;
     public event System.Action<EnemyHealth> Died;
 
+    public void SetVisualColor(Color color)
+    {
+        normalColor = color;
+        if (spriteRenderer != null)
+            spriteRenderer.color = color;
+    }
+
     public void SetRoundOwner(EnemySpawner owner)
     {
         roundOwner = owner;

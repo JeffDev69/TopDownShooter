@@ -71,7 +71,7 @@ public class MysteryBox : MonoBehaviour
 
         if (nearbyPlayer == null || Time.time >= messageUntil)
             ShowMessage("<color=#5EEBFF>[E] MYSTERY BOX - " + price + " COINS</color>\n"
-                + player.LoadoutText + "\nHOLDING: " + PlayerShoot.GetWeaponName(player.CurrentWeapon));
+                + player.LoadoutText + "\nHOLDING: " + player.CurrentWeaponFullName);
 
         PlacePrompt();
 
@@ -103,14 +103,14 @@ public class MysteryBox : MonoBehaviour
             return;
         }
 
-        PlayerShoot.WeaponType reward = nearbyPlayer.GiveRandomMysteryWeapon();
+        nearbyPlayer.GiveRandomMysteryWeapon();
         nextRollTime = Time.time + Mathf.Max(0.1f, rollCooldown);
         messageUntil = Time.time + 2f;
 
         if (boxRenderer != null)
             boxRenderer.color = openedColor;
 
-        ShowMessage("YOU GOT: " + PlayerShoot.GetWeaponName(reward)
+        ShowMessage("YOU GOT: " + nearbyPlayer.CurrentWeaponFullName
             + "!\n" + nearbyPlayer.LoadoutText);
     }
 

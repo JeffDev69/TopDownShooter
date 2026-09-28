@@ -50,6 +50,10 @@ public class Bullet : MonoBehaviour
         if (hitObject.CompareTag("Player"))
             return;
 
+        // Enemy spit should not block player bullets.
+        if (hitObject.GetComponentInParent<AcidProjectile>() != null)
+            return;
+
         if (explosionRadius > 0f)
         {
             destroyedByHit = true;

@@ -4,6 +4,10 @@ using UnityEngine;
 // Beheert endless rounds, mixt zombie types en trackt hoeveel enemies over zijn.
 public class EnemySpawner : MonoBehaviour
 {
+    public enum SpecialRoundType { Normal, FastRush, TankWave, ArmoredWave, SpitterSwarm }
+
+    public static EnemySpawner ActiveSpawner { get; private set; }
+
     public GameObject enemyPrefab;
     public GameObject tankPrefab;
     [Range(0f, 1f)] public float tankSpawnChance = 0.2f;
@@ -17,6 +21,13 @@ public class EnemySpawner : MonoBehaviour
     [Range(0f, 1f)] public float armoredSpawnChance = 0.13f;
     [Range(0f, 1f)] public float spitterSpawnChance = 0.10f;
     public int bossEveryRounds = 5;
+
+    [Header("Special Rounds")]
+    public int specialRoundEvery = 4;
+    public float specialRoundSizeMultiplier = 1.2f;
+    public float fastRoundSpeedMultiplier = 1.35f;
+    public float tankRoundHealthMultiplier = 1.5f;
+    public float armoredRoundHealthMultiplier = 1.35f;
 
     public float spawnInterval = 2f;
     public int firstRoundZombies = 5;
@@ -35,8 +46,14 @@ public class EnemySpawner : MonoBehaviour
 
     public int CurrentRound { get; private set; }
     public int ZombiesRemaining { get; private set; }
+    public SpecialRoundType CurrentSpecialRound { get; private set; }
     private ScoreManager roundDisplay;
     private PlayerHealth player;
+
+    void Awake()
+    {
+        ActiveSpawner = this;
+    }
 
     private bool PlayerAlive => player == null ||
         (player.gameObject.activeInHierarchy && player.currentHealth > 0);
@@ -64,6 +81,9 @@ public class EnemySpawner : MonoBehaviour
             CurrentRound++;
             int roundSize = Mathf.Max(1, firstRoundZombies) +
                 (CurrentRound - 1) * Mathf.Max(0, extraZombiesPerRound);
+            CurrentSpecialRound = DetermineSpecialRound();
+            if (CurrentSpecialRound != SpecialRoundType.Normal)
+                roundSize = Mathf.CeilToInt(roundSize * Mathf.Max(1f, specialRoundSizeMultiplier));
             ZombiesRemaining = roundSize;
             UpdateRoundDisplay(false);
 
@@ -96,7 +116,7 @@ public class EnemySpawner : MonoBehaviour
     private void UpdateRoundDisplay(bool cleared)
     {
         if (roundDisplay != null)
-            roundDisplay.ShowRound(CurrentRound, ZombiesRemaining, cleared);
+            roundDisplay.ShowRound(CurrentRound, ZombiesRemaining, cleared, SpecialRoundLabel());
     }
 
     void SpawnEnemy(bool forceBoss)
@@ -135,7 +155,7 @@ public class EnemySpawner : MonoBehaviour
             );
         }
 
-        GameObject selectedPrefab = forceBoss ? bossPrefab : PickRandomPrefab();
+        GameObject selectedPrefab = forceBoss ? bossPrefab : PickSpawnPrefab();
 
         if (selectedPrefab == null)
             selectedPrefab = enemyPrefab != null ? enemyPrefab : tankPrefab;
@@ -153,25 +173,115 @@ public class EnemySpawner : MonoBehaviour
             }
             zombieHealth.SetRoundOwner(this);
 
-            // Elke paar rounds krijgt iedere zombie extra health.
-            int healthSteps = (CurrentRound - 1) / Mathf.Max(1, healthIncreaseEveryRounds);
-            zombieHealth.health += healthSteps * Mathf.Max(0, healthAddedPerStep);
-
-            // Speed groeit rustig mee, maar heeft een cap zodat zombies speelbaar blijven.
-            EnemyMovement movement = zombie.GetComponent<EnemyMovement>();
-            float speedMultiplier = Mathf.Min(
-                Mathf.Max(1f, maximumSpeedMultiplier),
-                1f + (CurrentRound - 1) * Mathf.Max(0f, speedIncreasePerRound));
-            if (movement != null)
-            {
-                movement.moveSpeed *= speedMultiplier;
-            }
-
-            SpitterZombie spitter = zombie.GetComponent<SpitterZombie>();
-            if (spitter != null)
-                spitter.moveSpeed *= speedMultiplier;
+            ApplyRoundScaling(zombie, zombieHealth, forceBoss);
 
             ZombieSpawnEffect.Play(zombie);
+        }
+    }
+
+    public void SpawnBossMinions(Vector3 center, int amount)
+    {
+        GameObject minionPrefab = enemyPrefab != null ? enemyPrefab : tankPrefab;
+        if (minionPrefab == null) return;
+
+        for (int i = 0; i < Mathf.Max(0, amount); i++)
+        {
+            Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(1.5f, 3.2f);
+            GameObject zombie = Instantiate(minionPrefab, center + (Vector3)offset, Quaternion.identity);
+            EnemyHealth zombieHealth = zombie.GetComponent<EnemyHealth>();
+            if (zombieHealth == null)
+            {
+                Destroy(zombie);
+                continue;
+            }
+
+            ZombiesRemaining++;
+            zombieHealth.SetRoundOwner(this);
+            ApplyRoundScaling(zombie, zombieHealth, false);
+            ZombieSpawnEffect.Play(zombie);
+        }
+
+        UpdateRoundDisplay(false);
+    }
+
+    private GameObject PickSpawnPrefab()
+    {
+        GameObject specialPrefab = PickSpecialRoundPrefab();
+        return specialPrefab != null ? specialPrefab : PickRandomPrefab();
+    }
+
+    private GameObject PickSpecialRoundPrefab()
+    {
+        switch (CurrentSpecialRound)
+        {
+            case SpecialRoundType.FastRush:
+                return enemyPrefab;
+            case SpecialRoundType.TankWave:
+                return tankPrefab != null ? tankPrefab : enemyPrefab;
+            case SpecialRoundType.ArmoredWave:
+                return armoredPrefab != null ? armoredPrefab : enemyPrefab;
+            case SpecialRoundType.SpitterSwarm:
+                return spitterPrefab != null ? spitterPrefab : enemyPrefab;
+            default:
+                return null;
+        }
+    }
+
+    private void ApplyRoundScaling(GameObject zombie, EnemyHealth zombieHealth, bool boss)
+    {
+        // Elke paar rounds krijgt iedere zombie extra health.
+        int healthSteps = (CurrentRound - 1) / Mathf.Max(1, healthIncreaseEveryRounds);
+        zombieHealth.health += healthSteps * Mathf.Max(0, healthAddedPerStep);
+
+        EnemyMovement movement = zombie.GetComponent<EnemyMovement>();
+        float speedMultiplier = Mathf.Min(
+            Mathf.Max(1f, maximumSpeedMultiplier),
+            1f + (CurrentRound - 1) * Mathf.Max(0f, speedIncreasePerRound));
+
+        if (!boss)
+        {
+            if (CurrentSpecialRound == SpecialRoundType.FastRush)
+                speedMultiplier *= Mathf.Max(1f, fastRoundSpeedMultiplier);
+            if (CurrentSpecialRound == SpecialRoundType.TankWave)
+                zombieHealth.health = Mathf.CeilToInt(zombieHealth.health * Mathf.Max(1f, tankRoundHealthMultiplier));
+            if (CurrentSpecialRound == SpecialRoundType.ArmoredWave)
+                zombieHealth.health = Mathf.CeilToInt(zombieHealth.health * Mathf.Max(1f, armoredRoundHealthMultiplier));
+        }
+
+        if (movement != null)
+            movement.moveSpeed *= speedMultiplier;
+
+        SpitterZombie spitter = zombie.GetComponent<SpitterZombie>();
+        if (spitter != null)
+            spitter.moveSpeed *= speedMultiplier;
+    }
+
+    private SpecialRoundType DetermineSpecialRound()
+    {
+        if (specialRoundEvery <= 0 || CurrentRound % specialRoundEvery != 0)
+            return SpecialRoundType.Normal;
+        if (bossEveryRounds > 0 && CurrentRound % bossEveryRounds == 0)
+            return SpecialRoundType.Normal;
+
+        int cycle = (CurrentRound / Mathf.Max(1, specialRoundEvery)) % 4;
+        switch (cycle)
+        {
+            case 1: return SpecialRoundType.FastRush;
+            case 2: return SpecialRoundType.TankWave;
+            case 3: return SpecialRoundType.ArmoredWave;
+            default: return SpecialRoundType.SpitterSwarm;
+        }
+    }
+
+    private string SpecialRoundLabel()
+    {
+        switch (CurrentSpecialRound)
+        {
+            case SpecialRoundType.FastRush: return "FAST ROUND";
+            case SpecialRoundType.TankWave: return "TANK ROUND";
+            case SpecialRoundType.ArmoredWave: return "ARMORED ROUND";
+            case SpecialRoundType.SpitterSwarm: return "SPITTER ROUND";
+            default: return "";
         }
     }
 

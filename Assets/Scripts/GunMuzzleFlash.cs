@@ -29,10 +29,16 @@ public class GunMuzzleFlash : MonoBehaviour
         {
             case PlayerShoot.WeaponType.Shotgun:
             case PlayerShoot.WeaponType.DoubleBarrel:
+            case PlayerShoot.WeaponType.SPAS12:
+            case PlayerShoot.WeaponType.AA12:
                 length = 0.6f; width = 0.35f; break;
             case PlayerShoot.WeaponType.Sniper:
+            case PlayerShoot.WeaponType.Dragunov:
+            case PlayerShoot.WeaponType.BarrettM82:
                 length = 0.65f; width = 0.23f; break;
             case PlayerShoot.WeaponType.Minigun:
+            case PlayerShoot.WeaponType.RPK:
+            case PlayerShoot.WeaponType.M60:
                 length = 0.45f; width = 0.25f; break;
         }
         length *= Random.Range(0.85f, 1.15f);

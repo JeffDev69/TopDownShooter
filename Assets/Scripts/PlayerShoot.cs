@@ -7,7 +7,37 @@ using TMPro;
 // Regelt twee weapon slots, shooting, ammo, reloads, melee en de weapon HUD text.
 public class PlayerShoot : MonoBehaviour
 {
-    public enum WeaponType { Empty = -1, Pistol = 0, Shotgun, SMG, Sniper, AssaultRifle, DoubleBarrel, Minigun, BurstRifle, RocketLauncher, RayGun, Flamethrower }
+    public enum WeaponType
+    {
+        Empty = -1,
+        Pistol = 0,
+        Shotgun,
+        SMG,
+        Sniper,
+        AssaultRifle,
+        DoubleBarrel,
+        Minigun,
+        BurstRifle,
+        RocketLauncher,
+        RayGun,
+        Flamethrower,
+        Revolver,
+        DesertEagle,
+        Uzi,
+        P90,
+        M4A1,
+        Famas,
+        SCARH,
+        SPAS12,
+        AA12,
+        Dragunov,
+        BarrettM82,
+        RPK,
+        M60,
+        Galil,
+        RPG7
+    }
+    public enum WeaponRarity { Common, Rare, Epic, Legendary }
     public GameObject bulletPrefab;
     public Transform firePoint;
     public float fireRate = 0.3f;
@@ -20,7 +50,8 @@ public class PlayerShoot : MonoBehaviour
     private int damageMultiplier = 1;
     private readonly int[] magazineAmmo = new int[2];
     private readonly int[] reserveAmmo = new int[2];
-    private readonly bool[] packedWeaponSlots = new bool[2];
+    private readonly int[] packTiers = new int[2];
+    private readonly WeaponRarity[] weaponRarities = { WeaponRarity.Common, WeaponRarity.Common };
     private int reserveMagazineMultiplier = 5;
     private bool reloading;
     private float reloadEndsAt;
@@ -104,6 +135,7 @@ public class PlayerShoot : MonoBehaviour
     public float flamethrowerFireRate = 0.12f;
 
     [Header("Pack-a-Punch")]
+    public int maxPackTier = 3;
     public float packedDamageMultiplier = 2f;
     public float packedMagazineMultiplier = 1.5f;
     public float packedFireRateMultiplier = 0.85f;
@@ -112,28 +144,54 @@ public class PlayerShoot : MonoBehaviour
     private bool bursting;
     private GunMuzzleFlash muzzleFlash;
     private FlamethrowerVisual flamethrowerVisual;
+    private PlayerAim playerAim;
     private readonly WeaponType[] weaponSlots = { WeaponType.Pistol, WeaponType.Empty };
     private int activeSlot;
     public WeaponType CurrentWeapon => weaponSlots[activeSlot];
-    public bool CurrentWeaponPacked => packedWeaponSlots[activeSlot];
-    public string LoadoutText => "1: " + GetWeaponName(weaponSlots[0])
-        + " | 2: " + GetWeaponName(weaponSlots[1]);
+    public bool CurrentWeaponPacked => packTiers[activeSlot] > 0;
+    public int CurrentPackTier => packTiers[activeSlot];
+    public WeaponRarity CurrentWeaponRarity => weaponRarities[activeSlot];
+    public string CurrentWeaponFullName => FormatPlainWeapon(activeSlot);
+    public string LoadoutText => "1: " + FormatPlainWeapon(0)
+        + " | 2: " + FormatPlainWeapon(1);
 
     public static string GetWeaponName(WeaponType weapon)
     {
         switch (weapon)
         {
-            case WeaponType.AssaultRifle: return "ASSAULT RIFLE";
+            case WeaponType.Pistol: return "M1911";
+            case WeaponType.Shotgun: return "REMINGTON 870";
+            case WeaponType.SMG: return "MP5";
+            case WeaponType.Sniper: return "L96A1";
+            case WeaponType.AssaultRifle: return "AK-47";
             case WeaponType.DoubleBarrel: return "DOUBLE BARREL";
-            case WeaponType.BurstRifle: return "BURST RIFLE";
-            case WeaponType.RocketLauncher: return "ROCKET LAUNCHER";
+            case WeaponType.Minigun: return "M134 MINIGUN";
+            case WeaponType.BurstRifle: return "M16A4";
+            case WeaponType.RocketLauncher: return "RPG-7";
             case WeaponType.RayGun: return "RAY GUN";
-            default: return weapon.ToString().ToUpperInvariant();
+            case WeaponType.Flamethrower: return "FLAMETHROWER";
+            case WeaponType.Revolver: return "MAGNUM REVOLVER";
+            case WeaponType.DesertEagle: return "DESERT EAGLE";
+            case WeaponType.Uzi: return "UZI";
+            case WeaponType.P90: return "P90";
+            case WeaponType.M4A1: return "M4A1";
+            case WeaponType.Famas: return "FAMAS";
+            case WeaponType.SCARH: return "SCAR-H";
+            case WeaponType.SPAS12: return "SPAS-12";
+            case WeaponType.AA12: return "AA-12";
+            case WeaponType.Dragunov: return "DRAGUNOV";
+            case WeaponType.BarrettM82: return "BARRETT M82";
+            case WeaponType.RPK: return "RPK";
+            case WeaponType.M60: return "M60";
+            case WeaponType.Galil: return "GALIL";
+            case WeaponType.RPG7: return "RPG-7";
+            default: return "EMPTY";
         }
     }
 
     void Start()
     {
+        playerAim = GetComponent<PlayerAim>();
         muzzleFlash = GetComponent<GunMuzzleFlash>();
         if (muzzleFlash == null) muzzleFlash = gameObject.AddComponent<GunMuzzleFlash>();
         flamethrowerVisual = GetComponent<FlamethrowerVisual>();
@@ -217,7 +275,8 @@ public class PlayerShoot : MonoBehaviour
             return;
         }
 
-        if (CurrentWeapon == WeaponType.BurstRifle)
+        playerAim?.RefreshWeaponVisual();
+        if (IsBurstWeapon(CurrentWeapon))
         {
             if (!bursting) StartCoroutine(FireBurst(activeSlot));
             return;
@@ -233,11 +292,8 @@ public class PlayerShoot : MonoBehaviour
         magazineAmmo[activeSlot]--;
         UpdateWeaponText();
         if (muzzleFlash != null) muzzleFlash.Show(firePoint, CurrentWeapon);
-        bool usingShotgun = CurrentWeapon == WeaponType.Shotgun;
-        bool usingDoubleBarrel = CurrentWeapon == WeaponType.DoubleBarrel;
-        int bulletCount = usingShotgun ? Mathf.Max(1, shotgunPellets)
-            : usingDoubleBarrel ? Mathf.Max(1, doubleBarrelPellets) : 1;
-        float spread = usingDoubleBarrel ? doubleBarrelSpread : shotgunSpread;
+        int bulletCount = PelletCount(CurrentWeapon);
+        float spread = SpreadFor(CurrentWeapon);
         var ignoredColliders = new List<Collider2D>(GetComponentsInChildren<Collider2D>());
 
         // Ignore older bullets as well as pellets from this shot.
@@ -246,14 +302,7 @@ public class PlayerShoot : MonoBehaviour
 
         for (int i = 0; i < bulletCount; i++)
         {
-            float angleOffset = 0f;
-
-            if (CurrentWeapon == WeaponType.SMG)
-                angleOffset = Random.Range(-Mathf.Abs(smgSpread) * 0.5f, Mathf.Abs(smgSpread) * 0.5f);
-            else if (CurrentWeapon == WeaponType.AssaultRifle)
-                angleOffset = Random.Range(-Mathf.Abs(assaultRifleSpread) * 0.5f, Mathf.Abs(assaultRifleSpread) * 0.5f);
-            else if (CurrentWeapon == WeaponType.Minigun)
-                angleOffset = Random.Range(-Mathf.Abs(minigunSpread) * 0.5f, Mathf.Abs(minigunSpread) * 0.5f);
+            float angleOffset = RandomSpreadFor(CurrentWeapon);
 
             if (bulletCount > 1)
             {
@@ -271,35 +320,14 @@ public class PlayerShoot : MonoBehaviour
             Bullet bullet = projectile.GetComponent<Bullet>();
             if (bullet != null)
             {
-                if (CurrentWeapon == WeaponType.SMG)
-                    bullet.damage = Mathf.Max(1, smgDamage);
-                else if (CurrentWeapon == WeaponType.AssaultRifle)
-                    bullet.damage = Mathf.Max(1, assaultRifleDamage);
-                else if (CurrentWeapon == WeaponType.Minigun)
-                    bullet.damage = Mathf.Max(1, minigunDamage);
-                else if (CurrentWeapon == WeaponType.RocketLauncher)
-                {
-                    bullet.damage = Mathf.Max(1, rocketDamage);
-                    bullet.speed *= Mathf.Max(0.1f, rocketSpeedMultiplier);
-                    bullet.explosionRadius = Mathf.Max(0.2f, rocketExplosionRadius);
-                }
-                else if (CurrentWeapon == WeaponType.RayGun)
-                {
-                    bullet.damage = Mathf.Max(1, rayGunDamage);
-                    bullet.speed *= Mathf.Max(0.1f, rayGunSpeedMultiplier);
-                }
-                else if (CurrentWeapon == WeaponType.Sniper)
-                {
-                    bullet.damage = Mathf.Max(1, sniperDamage);
-                    bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
-                }
+                ConfigureBullet(bullet, CurrentWeapon);
                 bullet.damage = ModifiedDamage(bullet.damage, activeSlot);
-                if (CurrentWeapon == WeaponType.RocketLauncher)
+                if (IsExplosiveWeapon(CurrentWeapon))
                     bullet.explosionDamage = bullet.damage;
             }
 
 
-            if (CurrentWeapon == WeaponType.RocketLauncher)
+            if (IsExplosiveWeapon(CurrentWeapon))
                 ProjectileVisuals.Apply(projectile, new Color(1f, 0.35f, 0.04f, 1f), 1.8f, 0.35f);
             else if (CurrentWeapon == WeaponType.RayGun)
                 ProjectileVisuals.Apply(projectile, new Color(0.25f, 1f, 0.35f, 1f), 1.35f, 0.22f);
@@ -318,20 +346,8 @@ public class PlayerShoot : MonoBehaviour
             ignoredColliders.AddRange(projectileColliders);
         }
 
-        float delay = fireRate;
-        switch (CurrentWeapon)
-        {
-            case WeaponType.Shotgun: delay = shotgunFireRate; break;
-            case WeaponType.SMG: delay = smgFireRate; break;
-            case WeaponType.Sniper: delay = sniperFireRate; break;
-            case WeaponType.AssaultRifle: delay = assaultRifleFireRate; break;
-            case WeaponType.DoubleBarrel: delay = doubleBarrelFireRate; break;
-            case WeaponType.Minigun: delay = minigunFireRate; break;
-            case WeaponType.RocketLauncher: delay = rocketFireRate; break;
-            case WeaponType.RayGun: delay = rayGunFireRate; break;
-        }
-        if (CurrentWeaponPacked)
-            delay *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
+        float delay = FireDelayFor(CurrentWeapon);
+        delay *= PackedFireRateScale(activeSlot);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
     }
 
@@ -339,25 +355,25 @@ public class PlayerShoot : MonoBehaviour
     {
         bursting = true;
         float cooldown = burstRifleCooldown;
-        if (packedWeaponSlots[slot])
-            cooldown *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
+        cooldown *= PackedFireRateScale(slot);
         nextShotTime = Time.time + Mathf.Max(0.1f, cooldown);
         int shots = Mathf.Max(1, burstShotCount);
 
         for (int i = 0; i < shots; i++)
         {
-            if (activeSlot != slot || weaponSlots[slot] != WeaponType.BurstRifle ||
+            if (activeSlot != slot || !IsBurstWeapon(weaponSlots[slot]) ||
                 reloading || magazineAmmo[slot] <= 0) break;
 
+            playerAim?.RefreshWeaponVisual();
             magazineAmmo[slot]--;
             UpdateWeaponText();
-            if (muzzleFlash != null) muzzleFlash.Show(firePoint, WeaponType.BurstRifle);
+            if (muzzleFlash != null) muzzleFlash.Show(firePoint, weaponSlots[slot]);
 
             GameObject projectile = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
             Bullet bullet = projectile.GetComponent<Bullet>();
             if (bullet != null)
-                bullet.damage = ModifiedDamage(burstRifleDamage, slot);
-            if (packedWeaponSlots[slot])
+                bullet.damage = ModifiedDamage(BurstDamageFor(weaponSlots[slot]), slot);
+            if (packTiers[slot] > 0)
                 ProjectileVisuals.Apply(projectile, new Color(0.95f, 0.25f, 1f, 1f), 1.2f, 0.18f);
             IgnoreProjectileCollisions(projectile);
 
@@ -372,8 +388,7 @@ public class PlayerShoot : MonoBehaviour
     {
         magazineAmmo[activeSlot]--;
         float delay = flamethrowerFireRate;
-        if (CurrentWeaponPacked)
-            delay *= Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f);
+        delay *= PackedFireRateScale(activeSlot);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
         UpdateWeaponText();
 
@@ -471,22 +486,190 @@ public class PlayerShoot : MonoBehaviour
 
     public WeaponType GiveRandomMysteryWeapon()
     {
-        WeaponType reward = (WeaponType)Random.Range(1, (int)WeaponType.Flamethrower + 1);
-        GiveWeapon(reward);
+        WeaponType reward = (WeaponType)Random.Range(1, (int)WeaponType.RPG7 + 1);
+        GiveWeapon(reward, RollRarity());
         return reward;
     }
 
     private void GiveWeapon(WeaponType weapon)
+    {
+        GiveWeapon(weapon, WeaponRarity.Common);
+    }
+
+    private void GiveWeapon(WeaponType weapon, WeaponRarity rarity)
     {
         // First reward fills slot two. Later rewards replace only the held gun.
         if (weaponSlots[1] == WeaponType.Empty)
             activeSlot = 1;
 
         weaponSlots[activeSlot] = weapon;
-        packedWeaponSlots[activeSlot] = false;
+        packTiers[activeSlot] = 0;
+        weaponRarities[activeSlot] = rarity;
         reloading = false;
         FillSlotAmmo(activeSlot);
         UpdateWeaponText();
+    }
+
+    private bool IsBurstWeapon(WeaponType weapon)
+    {
+        return weapon == WeaponType.BurstRifle || weapon == WeaponType.Famas;
+    }
+
+    private bool IsExplosiveWeapon(WeaponType weapon)
+    {
+        return weapon == WeaponType.RocketLauncher || weapon == WeaponType.RPG7;
+    }
+
+    private int PelletCount(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.Shotgun:
+            case WeaponType.SPAS12:
+                return Mathf.Max(1, shotgunPellets);
+            case WeaponType.DoubleBarrel:
+                return Mathf.Max(1, doubleBarrelPellets);
+            case WeaponType.AA12:
+                return 6;
+            default:
+                return 1;
+        }
+    }
+
+    private float SpreadFor(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.DoubleBarrel:
+                return doubleBarrelSpread;
+            case WeaponType.SPAS12:
+                return shotgunSpread * 0.85f;
+            case WeaponType.AA12:
+                return shotgunSpread * 0.75f;
+            default:
+                return shotgunSpread;
+        }
+    }
+
+    private float RandomSpreadFor(WeaponType weapon)
+    {
+        float spread = 0f;
+        switch (weapon)
+        {
+            case WeaponType.SMG:
+            case WeaponType.Uzi:
+            case WeaponType.P90:
+                spread = smgSpread;
+                break;
+            case WeaponType.AssaultRifle:
+            case WeaponType.M4A1:
+            case WeaponType.Famas:
+            case WeaponType.SCARH:
+            case WeaponType.Galil:
+                spread = assaultRifleSpread;
+                break;
+            case WeaponType.Minigun:
+            case WeaponType.RPK:
+            case WeaponType.M60:
+                spread = minigunSpread;
+                break;
+        }
+
+        return spread <= 0f ? 0f : Random.Range(-Mathf.Abs(spread) * 0.5f, Mathf.Abs(spread) * 0.5f);
+    }
+
+    private void ConfigureBullet(Bullet bullet, WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.SMG:
+            case WeaponType.Uzi:
+            case WeaponType.P90:
+                bullet.damage = Mathf.Max(1, smgDamage);
+                break;
+            case WeaponType.AssaultRifle:
+            case WeaponType.M4A1:
+            case WeaponType.Galil:
+                bullet.damage = Mathf.Max(1, assaultRifleDamage);
+                break;
+            case WeaponType.SCARH:
+                bullet.damage = Mathf.Max(1, assaultRifleDamage + 1);
+                break;
+            case WeaponType.Minigun:
+            case WeaponType.RPK:
+            case WeaponType.M60:
+                bullet.damage = Mathf.Max(1, minigunDamage);
+                break;
+            case WeaponType.RocketLauncher:
+            case WeaponType.RPG7:
+                bullet.damage = Mathf.Max(1, rocketDamage);
+                bullet.speed *= Mathf.Max(0.1f, rocketSpeedMultiplier);
+                bullet.explosionRadius = Mathf.Max(0.2f, rocketExplosionRadius);
+                break;
+            case WeaponType.RayGun:
+                bullet.damage = Mathf.Max(1, rayGunDamage);
+                bullet.speed *= Mathf.Max(0.1f, rayGunSpeedMultiplier);
+                break;
+            case WeaponType.Sniper:
+            case WeaponType.BarrettM82:
+                bullet.damage = Mathf.Max(1, sniperDamage);
+                bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
+                break;
+            case WeaponType.Dragunov:
+                bullet.damage = Mathf.Max(1, sniperDamage - 1);
+                bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier * 0.9f);
+                break;
+            case WeaponType.Revolver:
+                bullet.damage = 3;
+                break;
+            case WeaponType.DesertEagle:
+                bullet.damage = 4;
+                break;
+            default:
+                bullet.damage = Mathf.Max(1, bullet.damage);
+                break;
+        }
+    }
+
+    private float FireDelayFor(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.Shotgun: return shotgunFireRate;
+            case WeaponType.SPAS12: return 0.65f;
+            case WeaponType.AA12: return 0.22f;
+            case WeaponType.SMG: return smgFireRate;
+            case WeaponType.Uzi: return 0.075f;
+            case WeaponType.P90: return 0.085f;
+            case WeaponType.Sniper: return sniperFireRate;
+            case WeaponType.Dragunov: return 0.65f;
+            case WeaponType.BarrettM82: return 1.35f;
+            case WeaponType.AssaultRifle: return assaultRifleFireRate;
+            case WeaponType.M4A1: return 0.16f;
+            case WeaponType.SCARH: return 0.24f;
+            case WeaponType.Galil: return 0.19f;
+            case WeaponType.DoubleBarrel: return doubleBarrelFireRate;
+            case WeaponType.Minigun: return minigunFireRate;
+            case WeaponType.RPK: return 0.09f;
+            case WeaponType.M60: return 0.11f;
+            case WeaponType.RocketLauncher:
+            case WeaponType.RPG7: return rocketFireRate;
+            case WeaponType.RayGun: return rayGunFireRate;
+            case WeaponType.Revolver: return 0.5f;
+            case WeaponType.DesertEagle: return 0.42f;
+            default: return fireRate;
+        }
+    }
+
+    private int BurstDamageFor(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.Famas:
+                return Mathf.Max(1, burstRifleDamage + 1);
+            default:
+                return Mathf.Max(1, burstRifleDamage);
+        }
     }
 
     private static int MagazineSize(WeaponType weapon)
@@ -504,6 +687,21 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.RocketLauncher: return 4;
             case WeaponType.RayGun: return 20;
             case WeaponType.Flamethrower: return 60;
+            case WeaponType.Revolver: return 6;
+            case WeaponType.DesertEagle: return 7;
+            case WeaponType.Uzi: return 32;
+            case WeaponType.P90: return 50;
+            case WeaponType.M4A1: return 30;
+            case WeaponType.Famas: return 30;
+            case WeaponType.SCARH: return 20;
+            case WeaponType.SPAS12: return 8;
+            case WeaponType.AA12: return 20;
+            case WeaponType.Dragunov: return 10;
+            case WeaponType.BarrettM82: return 5;
+            case WeaponType.RPK: return 75;
+            case WeaponType.M60: return 100;
+            case WeaponType.Galil: return 35;
+            case WeaponType.RPG7: return 1;
             default: return 0;
         }
     }
@@ -526,7 +724,7 @@ public class PlayerShoot : MonoBehaviour
 
     public bool CanPackCurrentWeapon()
     {
-        return CurrentWeapon != WeaponType.Empty && !CurrentWeaponPacked;
+        return CurrentWeapon != WeaponType.Empty && CurrentPackTier < Mathf.Max(1, maxPackTier);
     }
 
     public bool PackCurrentWeapon()
@@ -534,10 +732,10 @@ public class PlayerShoot : MonoBehaviour
         if (!CanPackCurrentWeapon())
             return false;
 
-        packedWeaponSlots[activeSlot] = true;
+        packTiers[activeSlot]++;
         reloading = false;
         FillSlotAmmo(activeSlot);
-        powerUpMessage = "PACK-A-PUNCH!";
+        powerUpMessage = "PACK-A-PUNCH TIER " + CurrentPackTier + "!";
         showingMaxAmmo = true;
         maxAmmoMessageUntil = Time.time + 2f;
         UpdateWeaponText();
@@ -631,8 +829,7 @@ public class PlayerShoot : MonoBehaviour
         bool selected = slot == activeSlot;
         string color = selected ? "#17202E" : "#535969";
         string marker = selected ? "> " : "  ";
-        string packedPrefix = packedWeaponSlots[slot] ? "[PAP] " : "";
-        string label = marker + "[" + (slot + 1) + "]  " + packedPrefix + GetWeaponName(weaponSlots[slot]);
+        string label = marker + "[" + (slot + 1) + "]  " + FormatColoredWeapon(slot);
         if (weaponSlots[slot] != WeaponType.Empty)
         {
             label += "  " + magazineAmmo[slot] + "/" + reserveAmmo[slot];
@@ -647,18 +844,83 @@ public class PlayerShoot : MonoBehaviour
     private int MagazineSizeForSlot(int slot)
     {
         int baseSize = MagazineSize(weaponSlots[slot]);
-        if (!packedWeaponSlots[slot])
+        if (packTiers[slot] <= 0)
             return baseSize;
 
-        return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * Mathf.Max(1f, packedMagazineMultiplier)));
+        float perTierBonus = Mathf.Max(0f, packedMagazineMultiplier - 1f);
+        return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * (1f + perTierBonus * packTiers[slot])));
     }
 
     private int ModifiedDamage(int baseDamage, int slot)
     {
         float multiplier = damageMultiplier;
-        if (packedWeaponSlots[slot])
-            multiplier *= Mathf.Max(1f, packedDamageMultiplier);
+        multiplier *= RarityDamageMultiplier(weaponRarities[slot]);
+        if (packTiers[slot] > 0)
+            multiplier *= 1f + Mathf.Max(0.1f, packedDamageMultiplier - 1f) * packTiers[slot];
 
         return Mathf.Max(1, Mathf.CeilToInt(baseDamage * multiplier));
+    }
+
+    private float PackedFireRateScale(int slot)
+    {
+        if (packTiers[slot] <= 0)
+            return 1f;
+
+        return Mathf.Pow(Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f), packTiers[slot]);
+    }
+
+    private static WeaponRarity RollRarity()
+    {
+        float roll = Random.value;
+        if (roll < 0.08f) return WeaponRarity.Legendary;
+        if (roll < 0.23f) return WeaponRarity.Epic;
+        if (roll < 0.53f) return WeaponRarity.Rare;
+        return WeaponRarity.Common;
+    }
+
+    private static float RarityDamageMultiplier(WeaponRarity rarity)
+    {
+        switch (rarity)
+        {
+            case WeaponRarity.Rare: return 1.2f;
+            case WeaponRarity.Epic: return 1.4f;
+            case WeaponRarity.Legendary: return 1.7f;
+            default: return 1f;
+        }
+    }
+
+    private static string RarityName(WeaponRarity rarity)
+    {
+        return rarity.ToString().ToUpperInvariant();
+    }
+
+    private static string RarityColor(WeaponRarity rarity)
+    {
+        switch (rarity)
+        {
+            case WeaponRarity.Rare: return "#2677FF";
+            case WeaponRarity.Epic: return "#A335EE";
+            case WeaponRarity.Legendary: return "#FF9F1C";
+            default: return "#535969";
+        }
+    }
+
+    private string FormatPlainWeapon(int slot)
+    {
+        if (weaponSlots[slot] == WeaponType.Empty)
+            return GetWeaponName(WeaponType.Empty);
+
+        string prefix = weaponRarities[slot] == WeaponRarity.Common ? "" : RarityName(weaponRarities[slot]) + " ";
+        string suffix = packTiers[slot] > 0 ? " PAP " + packTiers[slot] : "";
+        return prefix + GetWeaponName(weaponSlots[slot]) + suffix;
+    }
+
+    private string FormatColoredWeapon(int slot)
+    {
+        string label = FormatPlainWeapon(slot);
+        if (weaponSlots[slot] == WeaponType.Empty)
+            return label;
+
+        return "<color=" + RarityColor(weaponRarities[slot]) + ">" + label + "</color>";
     }
 }

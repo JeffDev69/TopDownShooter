@@ -11,10 +11,15 @@ public class BossZombie : MonoBehaviour
     [Range(0.05f, 1f)] public float damageTakenMultiplier = 0.55f;
     public float enragedSpeedMultiplier = 1.55f;
     public int contactDamage = 3;
+    public int minionsAtSecondPhase = 4;
+    public float finalPhaseSpeedMultiplier = 1.35f;
+    public int finalPhaseExtraDamage = 2;
     private EnemyHealth health;
     private EnemyMovement movement;
     private int startingHealth;
-    private bool enraged;
+    private bool phaseOne;
+    private bool phaseTwo;
+    private bool phaseThree;
 
     void Awake()
     {
@@ -44,8 +49,38 @@ public class BossZombie : MonoBehaviour
 
     void Update()
     {
-        if (enraged || health == null || health.IsDead || health.CurrentHealth > startingHealth / 2) return;
-        enraged = true;
-        if (movement != null) movement.moveSpeed *= Mathf.Max(1f, enragedSpeedMultiplier);
+        if (health == null || health.IsDead || startingHealth <= 0) return;
+
+        float healthPercent = (float)health.CurrentHealth / startingHealth;
+
+        if (!phaseOne && healthPercent <= 0.7f)
+        {
+            phaseOne = true;
+            if (movement != null)
+                movement.moveSpeed *= Mathf.Max(1f, enragedSpeedMultiplier);
+            health.SetVisualColor(new Color(1f, 0.85f, 0.55f, 1f));
+        }
+
+        if (!phaseTwo && healthPercent <= 0.4f)
+        {
+            phaseTwo = true;
+            if (EnemySpawner.ActiveSpawner != null)
+                EnemySpawner.ActiveSpawner.SpawnBossMinions(transform.position, minionsAtSecondPhase);
+            if (movement != null)
+                movement.damage = Mathf.Max(movement.damage, contactDamage + 1);
+            health.SetVisualColor(new Color(1f, 0.45f, 0.35f, 1f));
+        }
+
+        if (!phaseThree && healthPercent <= 0.15f)
+        {
+            phaseThree = true;
+            if (movement != null)
+            {
+                movement.moveSpeed *= Mathf.Max(1f, finalPhaseSpeedMultiplier);
+                movement.damage = Mathf.Max(movement.damage, contactDamage + Mathf.Max(0, finalPhaseExtraDamage));
+            }
+            health.incomingDamageMultiplier = Mathf.Min(health.incomingDamageMultiplier, 0.45f);
+            health.SetVisualColor(new Color(1f, 0.2f, 0.2f, 1f));
+        }
     }
 }

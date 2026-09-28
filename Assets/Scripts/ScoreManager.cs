@@ -62,9 +62,15 @@ public class ScoreManager : MonoBehaviour
     // Keep the existing component and text reference so scene wiring is preserved.
     public void ShowRound(int round, int remaining, bool cleared)
     {
+        ShowRound(round, remaining, cleared, "");
+    }
+
+    public void ShowRound(int round, int remaining, bool cleared, string roundLabel)
+    {
         if (scoreText == null) return;
+        string prefix = string.IsNullOrEmpty(roundLabel) ? "" : roundLabel + "\n";
         scoreText.text = cleared
-            ? "ROUND " + round + " CLEAR!"
-            : "ROUND " + round + " | LEFT: " + remaining;
+            ? prefix + "ROUND " + round + " CLEAR!"
+            : prefix + "ROUND " + round + " | LEFT: " + remaining;
     }
 }

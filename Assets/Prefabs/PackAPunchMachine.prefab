@@ -151,6 +151,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c7f2e5f6c6c34b2d8ff04a76b27fd7bc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PackAPunchMachine
-  price: 1500
+  tierOnePrice: 1500
+  tierTwoPrice: 3000
+  tierThreePrice: 5000
   interactionDistance: 2
   machineRenderer: {fileID: 7842374068213791186}
