@@ -34,17 +34,18 @@ public class Bullet : MonoBehaviour
 
     void OnCollisionEnter2D(Collision2D collision)
     {
-        HandleHit(collision.gameObject);
+        HandleHit(collision.collider);
     }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        HandleHit(other.gameObject);
+        HandleHit(other);
     }
 
-    private void HandleHit(GameObject hitObject)
+    private void HandleHit(Collider2D hitCollider)
     {
-        if (destroyedByHit || hitObject == null) return;
+        if (destroyedByHit || hitCollider == null) return;
+        GameObject hitObject = hitCollider.gameObject;
 
         // Do not destroy the bullet if it touches the player
         if (hitObject.CompareTag("Player"))
@@ -57,7 +58,7 @@ public class Bullet : MonoBehaviour
         if (explosionRadius > 0f)
         {
             destroyedByHit = true;
-            Explode();
+            Explode(hitCollider);
             return;
         }
 
@@ -75,18 +76,65 @@ public class Bullet : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void Explode()
+    private void Explode(Collider2D impactCollider)
     {
         if (detonated) return;
         detonated = true;
-        var damagedEnemies = new System.Collections.Generic.HashSet<EnemyHealth>();
-        foreach (Collider2D hit in Physics2D.OverlapCircleAll(transform.position, explosionRadius))
+        Vector2 origin = ExplosionOrigin(impactCollider);
+        var visibleEnemies = new System.Collections.Generic.Dictionary<EnemyHealth, float>();
+        foreach (Collider2D hit in Physics2D.OverlapCircleAll(origin, explosionRadius))
         {
             EnemyHealth enemy = hit.GetComponentInParent<EnemyHealth>();
-            if (enemy == null || !damagedEnemies.Add(enemy)) continue;
-            enemy.TakeDamage(Mathf.Max(1, explosionDamage));
+            if (enemy == null) continue;
+            Vector2 closestPoint = hit.ClosestPoint(origin);
+            if (ExplosionBlocked(origin, closestPoint)) continue;
+
+            float distance = Vector2.Distance(origin, closestPoint);
+            if (!visibleEnemies.TryGetValue(enemy, out float nearestDistance) || distance < nearestDistance)
+                visibleEnemies[enemy] = distance;
         }
-        WeaponExplosionEffect.Spawn(transform.position, explosionRadius);
+
+        foreach (var target in visibleEnemies)
+        {
+            // Direct hits keep their punch; enemies at the blast edge take reduced splash damage.
+            float falloff = Mathf.InverseLerp(explosionRadius * 0.25f, explosionRadius, target.Value);
+            int splashDamage = Mathf.Max(1, Mathf.RoundToInt(explosionDamage * Mathf.Lerp(1f, 0.35f, falloff)));
+            target.Key.TakeDamage(splashDamage);
+        }
+        WeaponExplosionEffect.Spawn(origin, explosionRadius);
         Destroy(gameObject);
+    }
+
+    private Vector2 ExplosionOrigin(Collider2D impactCollider)
+    {
+        Vector2 origin = transform.position;
+        if (impactCollider == null || impactCollider.isTrigger ||
+            impactCollider.GetComponentInParent<EnemyHealth>() != null) return origin;
+
+        // A trigger projectile can already overlap the wall when the hit arrives. Put the
+        // blast just outside its entry surface so the wall only shields its far side.
+        Vector2 direction = transform.right;
+        float backtrack = Vector2.Distance(origin, impactCollider.bounds.center) +
+            impactCollider.bounds.extents.magnitude + 0.05f;
+        foreach (RaycastHit2D hit in Physics2D.LinecastAll(origin - direction * backtrack, origin))
+        {
+            if (hit.collider == impactCollider)
+                return hit.point - direction * 0.02f;
+        }
+        return origin;
+    }
+
+    private bool ExplosionBlocked(Vector2 origin, Vector2 target)
+    {
+        foreach (RaycastHit2D hit in Physics2D.LinecastAll(origin, target))
+        {
+            Collider2D collider = hit.collider;
+            if (collider == null || collider.isTrigger ||
+                collider.GetComponentInParent<EnemyHealth>() != null ||
+                collider.GetComponentInParent<Bullet>() != null ||
+                collider.GetComponentInParent<PlayerHealth>() != null) continue;
+            return true;
+        }
+        return false;
     }
 }

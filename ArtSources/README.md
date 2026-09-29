@@ -1,7 +1,7 @@
 # Speler- en wapenassets
 
 De game gebruikt de PNG's in `Assets/Resources/PlayerWeapons/Imported`.
-De bestaande wapenwaarden, slots en mystery-box-beloningen zijn behouden.
+De wapenbalans staat beschreven in `WeaponBalance.md`.
 
 De speler komt uit Kenney's originele vectorbestand. In
 `survivor_body.svg` is alleen de ingebouwde wapenlaag verwijderd. De PNG
@@ -13,6 +13,10 @@ vervangers, geen exacte modellen van alle merknamen op de HUD.
 `weapon-source-map.csv` koppelt elk wapentype aan zijn bronmodel, lengte,
 grippunt en renderrotatie. De twee raketwerpers gebruiken hetzelfde model
 met een eigen kleur en afmeting.
+
+De Ray Gun, Shotgun en AssaultRifle hebben opgefriste sprites, gemaakt met
+imagegen op basis van hun bestaande renders. Hun grippositie en afmetingen
+in de game zijn behouden. Zie `weapon-refresh.md` voor de prompts en assets.
 
 Alle credits en licenties staan in `Assets/StreamingAssets/AssetCredits.txt`.
 Unity neemt dat bestand mee in de build. De minigun is CC BY 3.0 en vereist

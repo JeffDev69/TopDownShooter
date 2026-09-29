@@ -48,6 +48,9 @@ public class PlayerShoot : MonoBehaviour
     [Header("Ammo")]
     public float reloadDuration = 1.5f;
     private int damageMultiplier = 1;
+    private float rapidFireScale = 1f;
+    // Carry fractional upgrade damage forward instead of rounding every pellet up.
+    private readonly float[] damageRemainders = new float[2];
     private readonly int[] magazineAmmo = new int[2];
     private readonly int[] reserveAmmo = new int[2];
     private readonly int[] packTiers = new int[2];
@@ -82,63 +85,63 @@ public class PlayerShoot : MonoBehaviour
 
     [Header("Shotgun")]
     [HideInInspector] public bool shotgunUnlocked;
-    public int shotgunPellets = 5;
-    public float shotgunSpread = 24f;
-    public float shotgunFireRate = 0.8f;
+    public int shotgunPellets = 4;
+    public float shotgunSpread = 30f;
+    public float shotgunFireRate = 0.95f;
 
     [Header("SMG")]
-    public float smgFireRate = 0.1f;
-    public float smgSpread = 5f;
+    public float smgFireRate = 0.18f;
+    public float smgSpread = 8f;
     public int smgDamage = 1;
 
     [Header("Sniper")]
-    public float sniperFireRate = 1.2f;
+    public float sniperFireRate = 1.55f;
     public int sniperDamage = 6;
     public float sniperSpeedMultiplier = 3f;
 
     [Header("Assault Rifle")]
-    public float assaultRifleFireRate = 0.18f;
+    public float assaultRifleFireRate = 0.34f;
     public int assaultRifleDamage = 2;
-    public float assaultRifleSpread = 3f;
+    public float assaultRifleSpread = 5f;
 
     [Header("Double Barrel")]
-    public int doubleBarrelPellets = 8;
-    public float doubleBarrelSpread = 36f;
-    public float doubleBarrelFireRate = 1.2f;
+    public int doubleBarrelPellets = 6;
+    public float doubleBarrelSpread = 42f;
+    public float doubleBarrelFireRate = 1.3f;
 
     [Header("Minigun")]
-    public float minigunFireRate = 0.06f;
-    public float minigunSpread = 10f;
+    public float minigunFireRate = 0.15f;
+    public float minigunSpread = 14f;
     public int minigunDamage = 1;
 
     [Header("Burst Rifle")]
     public int burstRifleDamage = 2;
     public int burstShotCount = 3;
-    public float burstShotDelay = 0.09f;
-    public float burstRifleCooldown = 0.55f;
+    public float burstShotDelay = 0.12f;
+    public float burstRifleCooldown = 1.05f;
 
     [Header("Rocket Launcher")]
-    public int rocketDamage = 8;
-    public float rocketExplosionRadius = 2.2f;
-    public float rocketFireRate = 1.4f;
+    public int rocketDamage = 6;
+    public float rocketExplosionRadius = 1.8f;
+    public float rocketFireRate = 1.8f;
     public float rocketSpeedMultiplier = 0.8f;
 
     [Header("Ray Gun")]
-    public int rayGunDamage = 4;
-    public float rayGunFireRate = 0.22f;
+    public int rayGunDamage = 3;
+    public float rayGunFireRate = 0.6f;
     public float rayGunSpeedMultiplier = 2f;
 
     [Header("Flamethrower")]
     public int flamethrowerDamage = 1;
-    public float flamethrowerRange = 5f;
-    public float flamethrowerConeAngle = 42f;
-    public float flamethrowerFireRate = 0.12f;
+    public float flamethrowerRange = 3.4f;
+    public float flamethrowerConeAngle = 36f;
+    public float flamethrowerFireRate = 0.24f;
 
     [Header("Pack-a-Punch")]
     public int maxPackTier = 3;
-    public float packedDamageMultiplier = 2f;
-    public float packedMagazineMultiplier = 1.5f;
-    public float packedFireRateMultiplier = 0.85f;
+    public float packedDamageMultiplier = 1.35f;
+    public float packedMagazineMultiplier = 1.2f;
+    public float packedFireRateMultiplier = 0.95f;
 
     private float nextShotTime;
     private bool bursting;
@@ -347,21 +350,21 @@ public class PlayerShoot : MonoBehaviour
         }
 
         float delay = FireDelayFor(CurrentWeapon);
-        delay *= PackedFireRateScale(activeSlot);
+        delay *= FireRateScale(activeSlot);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
     }
 
     private IEnumerator FireBurst(int slot)
     {
         bursting = true;
-        float cooldown = burstRifleCooldown;
-        cooldown *= PackedFireRateScale(slot);
+        WeaponType burstWeapon = weaponSlots[slot];
+        float cooldown = FireDelayFor(burstWeapon) * FireRateScale(slot);
         nextShotTime = Time.time + Mathf.Max(0.1f, cooldown);
         int shots = Mathf.Max(1, burstShotCount);
 
         for (int i = 0; i < shots; i++)
         {
-            if (activeSlot != slot || !IsBurstWeapon(weaponSlots[slot]) ||
+            if (activeSlot != slot || weaponSlots[slot] != burstWeapon ||
                 reloading || magazineAmmo[slot] <= 0) break;
 
             playerAim?.RefreshWeaponVisual();
@@ -369,7 +372,8 @@ public class PlayerShoot : MonoBehaviour
             UpdateWeaponText();
             if (muzzleFlash != null) muzzleFlash.Show(firePoint, weaponSlots[slot]);
 
-            GameObject projectile = Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
+            GameObject projectile = Instantiate(bulletPrefab, firePoint.position,
+                firePoint.rotation * Quaternion.Euler(0f, 0f, RandomSpreadFor(burstWeapon)));
             Bullet bullet = projectile.GetComponent<Bullet>();
             if (bullet != null)
                 bullet.damage = ModifiedDamage(BurstDamageFor(weaponSlots[slot]), slot);
@@ -378,7 +382,8 @@ public class PlayerShoot : MonoBehaviour
             IgnoreProjectileCollisions(projectile);
 
             if (i < shots - 1)
-                yield return new WaitForSeconds(Mathf.Max(0.02f, burstShotDelay));
+                yield return new WaitForSeconds(Mathf.Max(0.02f,
+                    burstShotDelay * (burstWeapon == WeaponType.Famas ? 0.7f : 1f) * FireRateScale(slot)));
         }
 
         bursting = false;
@@ -388,7 +393,7 @@ public class PlayerShoot : MonoBehaviour
     {
         magazineAmmo[activeSlot]--;
         float delay = flamethrowerFireRate;
-        delay *= PackedFireRateScale(activeSlot);
+        delay *= FireRateScale(activeSlot);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
         UpdateWeaponText();
 
@@ -398,6 +403,7 @@ public class PlayerShoot : MonoBehaviour
         float halfAngle = Mathf.Clamp(flamethrowerConeAngle * 0.5f, 5f, 80f);
         float minimumDot = Mathf.Cos(halfAngle * Mathf.Deg2Rad);
         var damagedEnemies = new HashSet<EnemyHealth>();
+        int tickDamage = ModifiedDamage(flamethrowerDamage, activeSlot);
 
         foreach (Collider2D target in Physics2D.OverlapCircleAll(origin + direction * range * 0.5f, range * 0.7f))
         {
@@ -410,7 +416,7 @@ public class PlayerShoot : MonoBehaviour
                 continue;
             if (MeleeBlocked(origin, target.ClosestPoint(origin))) continue;
 
-            enemy.TakeDamage(ModifiedDamage(flamethrowerDamage, activeSlot));
+            enemy.TakeDamage(tickDamage);
         }
 
         if (flamethrowerVisual != null)
@@ -505,6 +511,7 @@ public class PlayerShoot : MonoBehaviour
         weaponSlots[activeSlot] = weapon;
         packTiers[activeSlot] = 0;
         weaponRarities[activeSlot] = rarity;
+        damageRemainders[activeSlot] = 0f;
         reloading = false;
         FillSlotAmmo(activeSlot);
         UpdateWeaponText();
@@ -530,7 +537,7 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.DoubleBarrel:
                 return Mathf.Max(1, doubleBarrelPellets);
             case WeaponType.AA12:
-                return 6;
+                return 4;
             default:
                 return 1;
         }
@@ -545,7 +552,7 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.SPAS12:
                 return shotgunSpread * 0.85f;
             case WeaponType.AA12:
-                return shotgunSpread * 0.75f;
+                return shotgunSpread * 1.1f;
             default:
                 return shotgunSpread;
         }
@@ -557,15 +564,20 @@ public class PlayerShoot : MonoBehaviour
         switch (weapon)
         {
             case WeaponType.SMG:
-            case WeaponType.Uzi:
-            case WeaponType.P90:
                 spread = smgSpread;
+                break;
+            case WeaponType.Uzi:
+                spread = smgSpread * 1.5f;
+                break;
+            case WeaponType.P90:
+                spread = smgSpread * 0.9f;
                 break;
             case WeaponType.AssaultRifle:
             case WeaponType.M4A1:
             case WeaponType.Famas:
             case WeaponType.SCARH:
             case WeaponType.Galil:
+            case WeaponType.BurstRifle:
                 spread = assaultRifleSpread;
                 break;
             case WeaponType.Minigun:
@@ -582,6 +594,20 @@ public class PlayerShoot : MonoBehaviour
     {
         switch (weapon)
         {
+            case WeaponType.Pistol:
+                bullet.damage = 1;
+                break;
+            case WeaponType.Shotgun:
+            case WeaponType.SPAS12:
+            case WeaponType.DoubleBarrel:
+            case WeaponType.AA12:
+                bullet.damage = 1;
+                // Pellets are close-range crowd control, with no map-wide reach.
+                float range = weapon == WeaponType.AA12 ? 6f :
+                    weapon == WeaponType.DoubleBarrel ? 6.5f :
+                    weapon == WeaponType.SPAS12 ? 8f : 7.5f;
+                bullet.lifeTime = Mathf.Min(bullet.lifeTime, range / Mathf.Max(0.1f, bullet.speed));
+                break;
             case WeaponType.SMG:
             case WeaponType.Uzi:
             case WeaponType.P90:
@@ -597,8 +623,10 @@ public class PlayerShoot : MonoBehaviour
                 break;
             case WeaponType.Minigun:
             case WeaponType.RPK:
-            case WeaponType.M60:
                 bullet.damage = Mathf.Max(1, minigunDamage);
+                break;
+            case WeaponType.M60:
+                bullet.damage = Mathf.Max(1, minigunDamage + 1);
                 break;
             case WeaponType.RocketLauncher:
             case WeaponType.RPG7:
@@ -611,12 +639,15 @@ public class PlayerShoot : MonoBehaviour
                 bullet.speed *= Mathf.Max(0.1f, rayGunSpeedMultiplier);
                 break;
             case WeaponType.Sniper:
-            case WeaponType.BarrettM82:
                 bullet.damage = Mathf.Max(1, sniperDamage);
                 bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
                 break;
+            case WeaponType.BarrettM82:
+                bullet.damage = Mathf.Max(1, sniperDamage + 1);
+                bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier);
+                break;
             case WeaponType.Dragunov:
-                bullet.damage = Mathf.Max(1, sniperDamage - 1);
+                bullet.damage = Mathf.Max(1, sniperDamage - 2);
                 bullet.speed *= Mathf.Max(0.1f, sniperSpeedMultiplier * 0.9f);
                 break;
             case WeaponType.Revolver:
@@ -636,40 +667,36 @@ public class PlayerShoot : MonoBehaviour
         switch (weapon)
         {
             case WeaponType.Shotgun: return shotgunFireRate;
-            case WeaponType.SPAS12: return 0.65f;
-            case WeaponType.AA12: return 0.22f;
+            case WeaponType.SPAS12: return 0.82f;
+            case WeaponType.AA12: return 0.55f;
             case WeaponType.SMG: return smgFireRate;
-            case WeaponType.Uzi: return 0.075f;
-            case WeaponType.P90: return 0.085f;
+            case WeaponType.Uzi: return 0.15f;
+            case WeaponType.P90: return 0.17f;
             case WeaponType.Sniper: return sniperFireRate;
-            case WeaponType.Dragunov: return 0.65f;
-            case WeaponType.BarrettM82: return 1.35f;
+            case WeaponType.Dragunov: return 1.05f;
+            case WeaponType.BarrettM82: return 1.9f;
             case WeaponType.AssaultRifle: return assaultRifleFireRate;
-            case WeaponType.M4A1: return 0.16f;
-            case WeaponType.SCARH: return 0.24f;
-            case WeaponType.Galil: return 0.19f;
+            case WeaponType.M4A1: return 0.3f;
+            case WeaponType.SCARH: return 0.5f;
+            case WeaponType.Galil: return 0.34f;
             case WeaponType.DoubleBarrel: return doubleBarrelFireRate;
             case WeaponType.Minigun: return minigunFireRate;
-            case WeaponType.RPK: return 0.09f;
-            case WeaponType.M60: return 0.11f;
+            case WeaponType.RPK: return 0.19f;
+            case WeaponType.M60: return 0.38f;
+            case WeaponType.BurstRifle: return burstRifleCooldown;
+            case WeaponType.Famas: return burstRifleCooldown * 0.9f;
             case WeaponType.RocketLauncher:
             case WeaponType.RPG7: return rocketFireRate;
             case WeaponType.RayGun: return rayGunFireRate;
-            case WeaponType.Revolver: return 0.5f;
-            case WeaponType.DesertEagle: return 0.42f;
+            case WeaponType.Revolver: return 0.72f;
+            case WeaponType.DesertEagle: return 0.95f;
             default: return fireRate;
         }
     }
 
     private int BurstDamageFor(WeaponType weapon)
     {
-        switch (weapon)
-        {
-            case WeaponType.Famas:
-                return Mathf.Max(1, burstRifleDamage + 1);
-            default:
-                return Mathf.Max(1, burstRifleDamage);
-        }
+        return Mathf.Max(1, burstRifleDamage);
     }
 
     private static int MagazineSize(WeaponType weapon)
@@ -682,11 +709,11 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.Sniper: return 5;
             case WeaponType.AssaultRifle: return 30;
             case WeaponType.DoubleBarrel: return 2;
-            case WeaponType.Minigun: return 100;
+            case WeaponType.Minigun: return 80;
             case WeaponType.BurstRifle: return 24;
-            case WeaponType.RocketLauncher: return 4;
-            case WeaponType.RayGun: return 20;
-            case WeaponType.Flamethrower: return 60;
+            case WeaponType.RocketLauncher: return 2;
+            case WeaponType.RayGun: return 12;
+            case WeaponType.Flamethrower: return 40;
             case WeaponType.Revolver: return 6;
             case WeaponType.DesertEagle: return 7;
             case WeaponType.Uzi: return 32;
@@ -695,11 +722,11 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.Famas: return 30;
             case WeaponType.SCARH: return 20;
             case WeaponType.SPAS12: return 8;
-            case WeaponType.AA12: return 20;
+            case WeaponType.AA12: return 10;
             case WeaponType.Dragunov: return 10;
             case WeaponType.BarrettM82: return 5;
-            case WeaponType.RPK: return 75;
-            case WeaponType.M60: return 100;
+            case WeaponType.RPK: return 60;
+            case WeaponType.M60: return 75;
             case WeaponType.Galil: return 35;
             case WeaponType.RPG7: return 1;
             default: return 0;
@@ -718,7 +745,7 @@ public class PlayerShoot : MonoBehaviour
         if (reloading || bursting || reserveAmmo[activeSlot] <= 0 ||
             magazineAmmo[activeSlot] >= MagazineSizeForSlot(activeSlot)) return;
         reloading = true;
-        reloadEndsAt = Time.time + Mathf.Max(0.1f, reloadDuration);
+        reloadEndsAt = Time.time + Mathf.Max(0.1f, reloadDuration * ReloadScaleFor(CurrentWeapon));
         UpdateWeaponText();
     }
 
@@ -764,19 +791,8 @@ public class PlayerShoot : MonoBehaviour
 
     public void ApplyRapidFirePerk()
     {
-        const float multiplier = 0.75f;
-        fireRate *= multiplier;
-        shotgunFireRate *= multiplier;
-        smgFireRate *= multiplier;
-        sniperFireRate *= multiplier;
-        assaultRifleFireRate *= multiplier;
-        doubleBarrelFireRate *= multiplier;
-        minigunFireRate *= multiplier;
-        burstShotDelay *= multiplier;
-        burstRifleCooldown *= multiplier;
-        rocketFireRate *= multiplier;
-        rayGunFireRate *= multiplier;
-        flamethrowerFireRate *= multiplier;
+        // 25% more shots per second, including variants with fixed base delays.
+        rapidFireScale = 1f / 1.25f;
     }
 
     public void ApplyAmmoBeltPerk()
@@ -848,7 +864,8 @@ public class PlayerShoot : MonoBehaviour
             return baseSize;
 
         float perTierBonus = Mathf.Max(0f, packedMagazineMultiplier - 1f);
-        return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * (1f + perTierBonus * packTiers[slot])));
+        // A whole-number bonus such as 80 * 1.6 must not gain a round from float error.
+        return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * (1f + perTierBonus * packTiers[slot]) - 0.0001f));
     }
 
     private int ModifiedDamage(int baseDamage, int slot)
@@ -858,15 +875,49 @@ public class PlayerShoot : MonoBehaviour
         if (packTiers[slot] > 0)
             multiplier *= 1f + Mathf.Max(0.1f, packedDamageMultiplier - 1f) * packTiers[slot];
 
-        return Mathf.Max(1, Mathf.CeilToInt(baseDamage * multiplier));
+        float exactDamage = Mathf.Max(1, baseDamage) * multiplier + damageRemainders[slot];
+        int damage = Mathf.Max(1, Mathf.FloorToInt(exactDamage + 0.00001f));
+        damageRemainders[slot] = Mathf.Max(0f, exactDamage - damage);
+        return damage;
     }
 
-    private float PackedFireRateScale(int slot)
+    private float FireRateScale(int slot)
     {
         if (packTiers[slot] <= 0)
-            return 1f;
+            return rapidFireScale;
 
-        return Mathf.Pow(Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f), packTiers[slot]);
+        return rapidFireScale * Mathf.Pow(Mathf.Clamp(packedFireRateMultiplier, 0.35f, 1f), packTiers[slot]);
+    }
+
+    private static float ReloadScaleFor(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.Minigun: return 2.8f;
+            case WeaponType.RPK:
+            case WeaponType.M60: return 2.4f;
+            case WeaponType.RocketLauncher:
+            case WeaponType.RPG7:
+            case WeaponType.Flamethrower: return 2f;
+            case WeaponType.AA12:
+            case WeaponType.Sniper:
+            case WeaponType.BarrettM82: return 1.6f;
+            case WeaponType.Shotgun:
+            case WeaponType.SPAS12:
+            case WeaponType.Dragunov:
+            case WeaponType.AssaultRifle:
+            case WeaponType.M4A1:
+            case WeaponType.Galil:
+            case WeaponType.SCARH:
+            case WeaponType.BurstRifle:
+            case WeaponType.Famas: return 1.4f;
+            case WeaponType.SMG:
+            case WeaponType.Uzi:
+            case WeaponType.P90:
+            case WeaponType.RayGun:
+            case WeaponType.DesertEagle: return 1.2f;
+            default: return 1f;
+        }
     }
 
     private static WeaponRarity RollRarity()
@@ -882,9 +933,9 @@ public class PlayerShoot : MonoBehaviour
     {
         switch (rarity)
         {
-            case WeaponRarity.Rare: return 1.2f;
-            case WeaponRarity.Epic: return 1.4f;
-            case WeaponRarity.Legendary: return 1.7f;
+            case WeaponRarity.Rare: return 1.1f;
+            case WeaponRarity.Epic: return 1.2f;
+            case WeaponRarity.Legendary: return 1.35f;
             default: return 1f;
         }
     }

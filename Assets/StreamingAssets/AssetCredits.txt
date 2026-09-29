@@ -24,6 +24,11 @@ lighting and some materials were adjusted. RPG7 uses an olive variant
 of the rocket launcher. These are stylized stand-ins, not exact replicas
 of every real-world gun named in the game's HUD.
 
+RayGun.png, Shotgun.png and AssaultRifle.png were visually refreshed with
+OpenAI's built-in imagegen tool (2026-09-29), using the above Quaternius
+renders as references. Original source credits are retained. Generation
+prompts and integration notes are recorded in ArtSources/weapon-refresh.md.
+
 Lucian Pavel - FLAMETHROWER PBR(UNITY) CC0
 https://opengameart.org/content/flamethrower-pbrunity-cc0
 License: CC0 1.0
