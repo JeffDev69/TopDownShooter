@@ -4,7 +4,7 @@ using UnityEngine;
 // Houdt alle nieuwe perk machine sprites op dezelfde Unity import size.
 public class PerkMachineSpriteImporter : AssetPostprocessor
 {
-    private const string Folder = "Assets/Resources/PerkMachines";
+    private const string Folder = "Assets/Sprites/PerkMachines";
 
     [InitializeOnLoadMethod]
     private static void ConfigureExistingSprites()
@@ -29,6 +29,9 @@ public class PerkMachineSpriteImporter : AssetPostprocessor
 
     private static bool ApplySettings(TextureImporter importer)
     {
+        // Keep manually sliced sprites and their scene references intact.
+        if (importer.spriteImportMode == SpriteImportMode.Multiple) return false;
+
         bool changed = importer.textureType != TextureImporterType.Sprite ||
             importer.spriteImportMode != SpriteImportMode.Single ||
             !Mathf.Approximately(importer.spritePixelsPerUnit, 500f) ||

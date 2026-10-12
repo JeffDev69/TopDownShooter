@@ -1,27 +1,41 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
-// Geeft bestaande machines hun juiste sprite.
+// Activeert de machines bij iedere scene-load, ook na Restart.
 public static class MachineAutoSetup
 {
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void PrepareExistingMachines()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSceneSetup()
     {
-        // Sprites die handmatig in de Scene zijn gezet worden automatisch echte machines.
-        foreach (SpriteRenderer renderer in Object.FindObjectsByType<SpriteRenderer>())
-            ConfigureMachineFromSprite(renderer);
+        SceneManager.sceneLoaded -= PrepareExistingMachines;
+        SceneManager.sceneLoaded += PrepareExistingMachines;
+    }
 
-        foreach (PerkMachine machine in Object.FindObjectsByType<PerkMachine>())
+    private static void PrepareExistingMachines(Scene scene, LoadSceneMode mode)
+    {
+        foreach (GameObject root in scene.GetRootGameObjects())
         {
-            string spriteName = GetSpriteName(machine.perkType);
-            if (!string.IsNullOrEmpty(spriteName))
-                PrepareVisual(machine.gameObject, spriteName);
+            // Include inactive objects so their machines also work when enabled later.
+            foreach (SpriteRenderer renderer in root.GetComponentsInChildren<SpriteRenderer>(true))
+                ConfigureMachineFromSprite(renderer);
+
+            foreach (PerkMachine machine in root.GetComponentsInChildren<PerkMachine>(true))
+            {
+                if (machine.machineRenderer == null)
+                    machine.machineRenderer = machine.GetComponent<SpriteRenderer>();
+                PrepareVisual(machine.machineRenderer);
+            }
+
+            foreach (HealthMachine machine in root.GetComponentsInChildren<HealthMachine>(true))
+            {
+                if (machine.machineRenderer == null)
+                    machine.machineRenderer = machine.GetComponent<SpriteRenderer>();
+                PrepareVisual(machine.machineRenderer);
+            }
+
+            foreach (PackAPunchMachine machine in root.GetComponentsInChildren<PackAPunchMachine>(true))
+                PreparePackAPunchVisual(machine);
         }
-
-        foreach (HealthMachine machine in Object.FindObjectsByType<HealthMachine>())
-            PrepareVisual(machine.gameObject, "HealthStation");
-
-        foreach (PackAPunchMachine machine in Object.FindObjectsByType<PackAPunchMachine>())
-            PreparePackAPunchVisual(machine);
     }
 
     private static void ConfigureMachineFromSprite(SpriteRenderer renderer)
@@ -38,7 +52,7 @@ public static class MachineAutoSetup
             return;
         }
 
-        if (spriteName == "HealthStation")
+        if (spriteName == "HealthStation" || spriteName == "HealthStation_0")
         {
             HealthMachine healthMachine = renderer.GetComponent<HealthMachine>();
             if (healthMachine == null)
@@ -51,15 +65,31 @@ public static class MachineAutoSetup
         switch (spriteName)
         {
             case "VitalityBrewMachine":
+            case "VitalityBrewMachine_0":
                 perkType = PerkMachine.PerkType.VitalityBrew;
                 break;
+            case "rush":
+            case "rush_0":
+                perkType = PerkMachine.PerkType.StaminaRush;
+                break;
+            case "reload":
+            case "reload_0":
+                perkType = PerkMachine.PerkType.QuickReload;
+                break;
+            case "DoubleDamageMachine":
+            case "DoubleDamageMachine_0":
+                perkType = PerkMachine.PerkType.DoubleDamage;
+                break;
             case "RapidFireMachine":
+            case "RapidFireMachine_0":
                 perkType = PerkMachine.PerkType.RapidFire;
                 break;
             case "ArmorPlatingMachine":
+            case "ArmorPlatingMachine_0":
                 perkType = PerkMachine.PerkType.ArmorPlating;
                 break;
             case "AmmoBeltMachine":
+            case "AmmoBeltMachine_0":
                 perkType = PerkMachine.PerkType.AmmoBelt;
                 break;
             default:
@@ -68,42 +98,19 @@ public static class MachineAutoSetup
 
         PerkMachine perkMachine = renderer.GetComponent<PerkMachine>();
         if (perkMachine == null)
+        {
             perkMachine = renderer.gameObject.AddComponent<PerkMachine>();
-        perkMachine.perkType = perkType;
+            perkMachine.perkType = perkType;
+        }
         perkMachine.machineRenderer = renderer;
     }
 
-    private static string GetSpriteName(PerkMachine.PerkType perkType)
+    private static void PrepareVisual(SpriteRenderer renderer)
     {
-        switch (perkType)
-        {
-            case PerkMachine.PerkType.VitalityBrew:
-                return "VitalityBrewMachine";
-            case PerkMachine.PerkType.RapidFire:
-                return "RapidFireMachine";
-            case PerkMachine.PerkType.ArmorPlating:
-                return "ArmorPlatingMachine";
-            case PerkMachine.PerkType.AmmoBelt:
-                return "AmmoBeltMachine";
-            default:
-                return null;
-        }
-    }
+        if (renderer == null) return;
+        renderer.color = Color.white;
 
-    private static void PrepareVisual(GameObject machine, string spriteName)
-    {
-        SpriteRenderer renderer = machine.GetComponent<SpriteRenderer>();
-        Sprite sprite = Resources.Load<Sprite>("PerkMachines/" + spriteName);
-        if (renderer != null)
-        {
-            renderer.color = Color.white;
-            if (sprite != null)
-                renderer.sprite = sprite;
-            else
-                Debug.LogWarning("Could not load perk machine sprite: " + spriteName);
-        }
-
-        Animator animator = machine.GetComponent<Animator>();
+        Animator animator = renderer.GetComponent<Animator>();
         if (animator != null)
             animator.enabled = false;
     }
