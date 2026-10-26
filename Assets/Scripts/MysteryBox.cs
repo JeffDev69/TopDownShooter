@@ -98,12 +98,14 @@ public class MysteryBox : MonoBehaviour
 
         if (!CoinManager.Instance.TrySpendCoins(price))
         {
+            GameAudio.Play(GameAudio.Cue.Error);
             ShowMessage("NEED " + price + " COINS");
             messageUntil = Time.time + 2f;
             return;
         }
 
         nearbyPlayer.GiveRandomMysteryWeapon();
+        GameAudio.Play(GameAudio.Cue.Purchase);
         nextRollTime = Time.time + Mathf.Max(0.1f, rollCooldown);
         messageUntil = Time.time + 2f;
 

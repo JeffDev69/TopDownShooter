@@ -86,6 +86,8 @@ public class EnemySpawner : MonoBehaviour
                 roundSize = Mathf.CeilToInt(roundSize * Mathf.Max(1f, specialRoundSizeMultiplier));
             ZombiesRemaining = roundSize;
             UpdateRoundDisplay(false);
+            GameAudio.Play(bossEveryRounds > 0 && CurrentRound % bossEveryRounds == 0
+                ? GameAudio.Cue.Boss : GameAudio.Cue.RoundStart);
 
             for (int i = 0; i < roundSize; i++)
             {
@@ -102,6 +104,7 @@ public class EnemySpawner : MonoBehaviour
 
             if (!PlayerAlive) yield break;
             UpdateRoundDisplay(true);
+            GameAudio.Play(GameAudio.Cue.RoundClear);
             yield return new WaitForSeconds(Mathf.Max(0f, breakBetweenRounds));
         }
     }

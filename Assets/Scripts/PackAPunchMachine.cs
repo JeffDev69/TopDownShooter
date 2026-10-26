@@ -93,12 +93,14 @@ public class PackAPunchMachine : MonoBehaviour
         int price = CurrentPrice();
         if (CoinManager.Instance == null || !CoinManager.Instance.TrySpendCoins(price))
         {
+            GameAudio.Play(GameAudio.Cue.Error);
             ShowMessage("<color=#FF7373>NEED " + price + " COINS</color>");
             messageUntil = Time.time + 2f;
             return;
         }
 
         player.PackCurrentWeapon();
+        GameAudio.Play(GameAudio.Cue.Purchase, 1f, 0.82f);
         ShowMessage("<color=#73FF91>" + player.CurrentWeaponFullName + "!</color>");
         messageUntil = Time.time + 2f;
     }

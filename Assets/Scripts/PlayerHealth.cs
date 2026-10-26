@@ -43,6 +43,7 @@ public class PlayerHealth : MonoBehaviour
         int appliedDamage = Mathf.Max(1,
             Mathf.CeilToInt(Mathf.Max(0, damage) * incomingDamageMultiplier - 0.001f));
         currentHealth -= appliedDamage;
+        GameAudio.Play(GameAudio.Cue.PlayerHit, 0.9f, Random.Range(0.94f, 1.04f));
 
         Debug.Log("Player Health: " + currentHealth);
         UpdateHealthText();
@@ -122,6 +123,7 @@ public class PlayerHealth : MonoBehaviour
     void Die()
     {
         Debug.Log("GAME OVER");
+        GameAudio.Play(GameAudio.Cue.PlayerDeath);
         GameOverUI.SetActive(true);
         gameObject.SetActive(false);
     }

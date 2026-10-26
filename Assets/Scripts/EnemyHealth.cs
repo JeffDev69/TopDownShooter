@@ -29,6 +29,7 @@ public class EnemyHealth : MonoBehaviour
     private SpriteRenderer spriteRenderer;
     private Color normalColor;
     private bool isDead;
+    private float nextGroanAt;
     private EnemySpawner roundOwner;
     private static Sprite[] cachedBloodPoolSprites;
 
@@ -56,6 +57,14 @@ public class EnemyHealth : MonoBehaviour
         {
             normalColor = spriteRenderer.color;
         }
+        nextGroanAt = Time.time + Random.Range(2f, 6f);
+    }
+
+    void Update()
+    {
+        if (isDead || Time.time < nextGroanAt) return;
+        GameAudio.Play(GameAudio.Cue.ZombieGroan, 0.28f, Random.Range(0.82f, 1.12f));
+        nextGroanAt = Time.time + Random.Range(5f, 11f);
     }
 
     public void TakeDamage(int damage)
@@ -70,6 +79,8 @@ public class EnemyHealth : MonoBehaviour
         else
             health -= Mathf.Max(1, Mathf.CeilToInt(damage * incomingDamageMultiplier));
         SpawnBlood();
+        GameAudio.Play(health <= 0 ? GameAudio.Cue.EnemyDeath : GameAudio.Cue.EnemyHit,
+            health <= 0 ? 0.75f : 0.42f, Random.Range(0.92f, 1.08f));
 
         if (health <= 0)
         {

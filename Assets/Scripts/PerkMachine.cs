@@ -104,12 +104,16 @@ public class PerkMachine : MonoBehaviour
             !Keyboard.current.eKey.wasPressedThisFrame || Time.time < messageUntil) return;
         if (CoinManager.Instance == null || !CoinManager.Instance.TrySpendCoins(Price))
         {
+            GameAudio.Play(GameAudio.Cue.Error);
             prompt.text = "<color=#FF7373>NEED " + Price + " COINS</color>";
             messageUntil = Time.time + 2f;
             return;
         }
         if (playerPerks.BuyPerk(perkType))
+        {
+            GameAudio.Play(GameAudio.Cue.Purchase);
             prompt.text = "<color=#73FF91>" + PerkName + " PURCHASED!</color>";
+        }
         messageUntil = Time.time + 2f;
     }
 

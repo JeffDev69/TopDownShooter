@@ -60,6 +60,7 @@ public class MaxAmmoPickup : MonoBehaviour
 
         if (Vector2.Distance(transform.position, player.transform.position) <= pickupRadius)
         {
+            GameAudio.Play(GameAudio.Cue.PowerUp);
             switch (powerUpType)
             {
                 case PowerUpType.MaxAmmo: player.RefillAllAmmo(); break;

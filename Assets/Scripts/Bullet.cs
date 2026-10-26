@@ -102,6 +102,7 @@ public class Bullet : MonoBehaviour
             target.Key.TakeDamage(splashDamage);
         }
         WeaponExplosionEffect.Spawn(origin, explosionRadius);
+        GameAudio.Play(GameAudio.Cue.Explosion);
         Destroy(gameObject);
     }
 

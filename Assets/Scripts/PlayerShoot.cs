@@ -133,8 +133,8 @@ public class PlayerShoot : MonoBehaviour
 
     [Header("Flamethrower")]
     public int flamethrowerDamage = 1;
-    public float flamethrowerRange = 3.4f;
-    public float flamethrowerConeAngle = 36f;
+    public float flamethrowerRange = 4.2f;
+    public float flamethrowerConeAngle = 42f;
     public float flamethrowerFireRate = 0.24f;
 
     [Header("Pack-a-Punch")]
@@ -234,6 +234,7 @@ public class PlayerShoot : MonoBehaviour
             magazineAmmo[activeSlot] += transferred;
             reserveAmmo[activeSlot] -= transferred;
             reloading = false;
+            GameAudio.Play(GameAudio.Cue.Reload, 0.6f, 1.18f);
             UpdateWeaponText();
         }
 
@@ -256,7 +257,12 @@ public class PlayerShoot : MonoBehaviour
             UpdateWeaponText();
         }
 
-        if (Mouse.current != null && Mouse.current.leftButton.isPressed && Time.time >= nextShotTime)
+        bool fireRequested = Mouse.current != null &&
+            (IsAutomaticWeapon(CurrentWeapon)
+                ? Mouse.current.leftButton.isPressed
+                : Mouse.current.leftButton.wasPressedThisFrame);
+
+        if (fireRequested && Time.time >= nextShotTime)
         {
             Shoot();
         }
@@ -264,8 +270,14 @@ public class PlayerShoot : MonoBehaviour
 
     void Shoot()
     {
-        if (reloading || magazineAmmo[activeSlot] <= 0 || CurrentWeapon == WeaponType.Empty)
+        if (reloading || CurrentWeapon == WeaponType.Empty)
             return;
+        if (magazineAmmo[activeSlot] <= 0)
+        {
+            GameAudio.Play(GameAudio.Cue.Empty);
+            nextShotTime = Time.time + 0.2f;
+            return;
+        }
         if (bulletPrefab == null)
         {
             Debug.LogError("Bullet Prefab is not assigned!");
@@ -295,6 +307,7 @@ public class PlayerShoot : MonoBehaviour
         magazineAmmo[activeSlot]--;
         UpdateWeaponText();
         if (muzzleFlash != null) muzzleFlash.Show(firePoint, CurrentWeapon);
+        GameAudio.PlayWeapon(CurrentWeapon);
         int bulletCount = PelletCount(CurrentWeapon);
         float spread = SpreadFor(CurrentWeapon);
         var ignoredColliders = new List<Collider2D>(GetComponentsInChildren<Collider2D>());
@@ -371,6 +384,7 @@ public class PlayerShoot : MonoBehaviour
             magazineAmmo[slot]--;
             UpdateWeaponText();
             if (muzzleFlash != null) muzzleFlash.Show(firePoint, weaponSlots[slot]);
+            GameAudio.PlayWeapon(weaponSlots[slot]);
 
             GameObject projectile = Instantiate(bulletPrefab, firePoint.position,
                 firePoint.rotation * Quaternion.Euler(0f, 0f, RandomSpreadFor(burstWeapon)));
@@ -396,6 +410,7 @@ public class PlayerShoot : MonoBehaviour
         delay *= FireRateScale(activeSlot);
         nextShotTime = Time.time + Mathf.Max(0.05f, delay);
         UpdateWeaponText();
+        GameAudio.PlayWeapon(CurrentWeapon);
 
         Vector2 origin = firePoint.position;
         Vector2 direction = ((Vector2)firePoint.right).normalized;
@@ -456,6 +471,7 @@ public class PlayerShoot : MonoBehaviour
         nextShotTime = Mathf.Max(nextShotTime, Time.time + 0.25f);
         reloading = false;
         showingMelee = true;
+        GameAudio.Play(GameAudio.Cue.Melee, 0.8f, Random.Range(0.94f, 1.06f));
         meleeMessageUntil = Time.time + 0.25f;
         UpdateWeaponText();
 
@@ -520,6 +536,28 @@ public class PlayerShoot : MonoBehaviour
     private bool IsBurstWeapon(WeaponType weapon)
     {
         return weapon == WeaponType.BurstRifle || weapon == WeaponType.Famas;
+    }
+
+    private static bool IsAutomaticWeapon(WeaponType weapon)
+    {
+        switch (weapon)
+        {
+            case WeaponType.SMG:
+            case WeaponType.AssaultRifle:
+            case WeaponType.Minigun:
+            case WeaponType.Flamethrower:
+            case WeaponType.Uzi:
+            case WeaponType.P90:
+            case WeaponType.M4A1:
+            case WeaponType.SCARH:
+            case WeaponType.AA12:
+            case WeaponType.RPK:
+            case WeaponType.M60:
+            case WeaponType.Galil:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private bool IsExplosiveWeapon(WeaponType weapon)
@@ -746,6 +784,7 @@ public class PlayerShoot : MonoBehaviour
             magazineAmmo[activeSlot] >= MagazineSizeForSlot(activeSlot)) return;
         reloading = true;
         reloadEndsAt = Time.time + Mathf.Max(0.1f, reloadDuration * ReloadScaleFor(CurrentWeapon));
+        GameAudio.Play(GameAudio.Cue.Reload, 0.75f, 0.92f);
         UpdateWeaponText();
     }
 
