@@ -212,6 +212,8 @@ public class PlayerShoot : MonoBehaviour
             UpdateWeaponText();
         }
         int previousSlot = activeSlot;
+        if (GameInput.SwitchPressed && weaponSlots[1 - activeSlot] != WeaponType.Empty)
+            activeSlot = 1 - activeSlot;
         if (Keyboard.current != null)
         {
             if (Keyboard.current.digit1Key.wasPressedThisFrame)
@@ -238,11 +240,10 @@ public class PlayerShoot : MonoBehaviour
             UpdateWeaponText();
         }
 
-        if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+        if (GameInput.ReloadPressed)
             BeginReload();
 
-        if ((Keyboard.current != null && Keyboard.current.vKey.wasPressedThisFrame) ||
-            (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame))
+        if (GameInput.MeleePressed)
             GunBash();
 
         if (showingMelee && Time.time >= meleeMessageUntil)
@@ -257,10 +258,7 @@ public class PlayerShoot : MonoBehaviour
             UpdateWeaponText();
         }
 
-        bool fireRequested = Mouse.current != null &&
-            (IsAutomaticWeapon(CurrentWeapon)
-                ? Mouse.current.leftButton.isPressed
-                : Mouse.current.leftButton.wasPressedThisFrame);
+        bool fireRequested = GameInput.FireRequested(IsAutomaticWeapon(CurrentWeapon));
 
         if (fireRequested && Time.time >= nextShotTime)
         {
@@ -891,7 +889,9 @@ public class PlayerShoot : MonoBehaviour
             if (selected && showingMelee) label += "  MELEE!";
             else if (selected && reloading) label += "  RELOADING";
             else if (selected && magazineAmmo[slot] == 0)
-                label += reserveAmmo[slot] > 0 ? "  [R] RELOAD" : "  [V] MELEE";
+                label += reserveAmmo[slot] > 0
+                    ? (MobileControls.Active ? "  RELOAD" : "  [R] RELOAD")
+                    : (MobileControls.Active ? "  MELEE" : "  [V] MELEE");
         }
         return "<color=" + color + ">" + (selected ? "<b>" + label + "</b>" : label) + "</color>";
     }

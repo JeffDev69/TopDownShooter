@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Machine waarmee de player het huidige wapen permanent sterker maakt.
 public class PackAPunchMachine : MonoBehaviour
@@ -72,8 +71,7 @@ public class PackAPunchMachine : MonoBehaviour
         PlacePrompt();
         nearbyPlayer = player;
 
-        if (Keyboard.current == null || !Keyboard.current.eKey.wasPressedThisFrame ||
-            Time.time < messageUntil)
+        if (Time.time < messageUntil || !GameInput.TryInteract())
             return;
 
         TryPack();
@@ -116,7 +114,7 @@ public class PackAPunchMachine : MonoBehaviour
 
         int nextTier = player.CurrentPackTier + 1;
         int price = CurrentPrice();
-        return "<color=#F05CFF>[E] PACK-A-PUNCH - " + price + " COINS</color>\n"
+        return "<color=#F05CFF>" + GameInput.InteractHint + " PACK-A-PUNCH - " + price + " COINS</color>\n"
             + player.LoadoutText + "\nUPGRADE TO PAP " + nextTier + ": " + player.CurrentWeaponFullName;
     }
 

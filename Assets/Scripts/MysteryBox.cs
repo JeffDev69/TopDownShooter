@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Laat de player coins uitgeven voor een random weapon en toont dichtbij een world-space prompt.
 public class MysteryBox : MonoBehaviour
@@ -70,17 +69,14 @@ public class MysteryBox : MonoBehaviour
         }
 
         if (nearbyPlayer == null || Time.time >= messageUntil)
-            ShowMessage("<color=#5EEBFF>[E] MYSTERY BOX - " + price + " COINS</color>\n"
+            ShowMessage("<color=#5EEBFF>" + GameInput.InteractHint + " MYSTERY BOX - " + price + " COINS</color>\n"
                 + player.LoadoutText + "\nHOLDING: " + player.CurrentWeaponFullName);
 
         PlacePrompt();
 
         nearbyPlayer = player;
 
-        if (Keyboard.current == null)
-            return;
-
-        if (Keyboard.current.eKey.wasPressedThisFrame)
+        if (Time.time >= nextRollTime && GameInput.TryInteract())
             TryOpen();
     }
 

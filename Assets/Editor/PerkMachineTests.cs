@@ -16,11 +16,12 @@ public class PerkMachineTests
     {
         EditorSceneManager.OpenScene("Assets/Scenes/game.unity");
         yield return new EnterPlayMode();
-
+        using (new GameplayInputTestScope())
+        {
         // Exercise the actual restart path twice, including fresh perk ownership.
         for (int run = 0; run < 3; run++)
         {
-            yield return null;
+            yield return GameplayInputTestScope.Frames();
             EnemySpawner spawner = Object.FindFirstObjectByType<EnemySpawner>();
             spawner.StopAllCoroutines();
             foreach (EnemyHealth enemy in Object.FindObjectsByType<EnemyHealth>())
@@ -48,8 +49,7 @@ public class PerkMachineTests
                     Assert.That(perks.HasPerk(machine.perkType), Is.False);
                     Bounds bounds = machine.machineRenderer.bounds;
                     player.transform.position = new Vector3(bounds.center.x, bounds.min.y - 0.5f, 0f);
-                    yield return null;
-                    yield return null;
+                    yield return GameplayInputTestScope.Frames();
 
                     TextMeshPro prompt = machine.GetComponentInChildren<TextMeshPro>(true);
                     Assert.That(prompt, Is.Not.Null, machine.name);
@@ -57,16 +57,16 @@ public class PerkMachineTests
                     Assert.That(prompt.text, Does.Contain("[E]"), machine.name);
                     int before = CoinManager.Instance.Coins;
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
-                    yield return null;
+                    yield return GameplayInputTestScope.Frames();
                     InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                    yield return null;
+                    yield return GameplayInputTestScope.Frames();
 
                     Assert.That(perks.HasPerk(machine.perkType), Is.True, machine.name);
                     Assert.That(CoinManager.Instance.Coins, Is.EqualTo(before - prices[(int)machine.perkType]), machine.name);
                     Assert.That(prompt.text, Does.Contain("PURCHASED"), machine.name);
 
                     player.transform.position = new Vector3(200f, 200f, 0f);
-                    yield return null;
+                    yield return GameplayInputTestScope.Frames();
                     Assert.That(prompt.gameObject.activeSelf, Is.False, machine.name);
                 }
                 Assert.That(player.maxHealth, Is.EqualTo(8));
@@ -80,6 +80,7 @@ public class PerkMachineTests
                 SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
+        }
         yield return new ExitPlayMode();
     }
 

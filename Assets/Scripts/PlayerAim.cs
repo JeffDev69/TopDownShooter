@@ -79,16 +79,15 @@ public class PlayerAim : MonoBehaviour
     void Update()
     {
         RefreshWeaponVisual();
-        if (mainCamera == null || Mouse.current == null)
-            return;
-
-        Vector2 mouseScreenPosition = Mouse.current.position.ReadValue();
-
-        Vector3 mouseWorldPosition =
-            mainCamera.ScreenToWorldPoint(mouseScreenPosition);
-
-        Vector2 direction =
-            mouseWorldPosition - transform.position;
+        Vector2 direction;
+        if (MobileControls.Active)
+            direction = MobileControls.Aim;
+        else
+        {
+            if (mainCamera == null || Mouse.current == null) return;
+            Vector3 mouseWorldPosition = mainCamera.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            direction = mouseWorldPosition - transform.position;
+        }
 
         float angle =
             Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;

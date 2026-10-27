@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Reusable machine waarmee de player permanent perks kan kopen.
 public class PerkMachine : MonoBehaviour
@@ -98,10 +97,9 @@ public class PerkMachine : MonoBehaviour
         bool owned = playerPerks.HasPerk(perkType);
         if (Time.time >= messageUntil)
             prompt.text = owned ? "<color=#73FF91>" + PerkName + " OWNED</color>"
-                : "[E] " + PerkName + " - " + Price + " COINS\n" + Effect;
+                : GameInput.InteractHint + " " + PerkName + " - " + Price + " COINS\n" + Effect;
 
-        if (owned || Keyboard.current == null ||
-            !Keyboard.current.eKey.wasPressedThisFrame || Time.time < messageUntil) return;
+        if (owned || Time.time < messageUntil || !GameInput.TryInteract()) return;
         if (CoinManager.Instance == null || !CoinManager.Instance.TrySpendCoins(Price))
         {
             GameAudio.Play(GameAudio.Cue.Error);

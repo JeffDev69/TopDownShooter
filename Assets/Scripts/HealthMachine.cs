@@ -1,6 +1,5 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 // Reusable heal station: betaal coins om alle verloren hearts terug te krijgen.
 public class HealthMachine : MonoBehaviour
@@ -50,10 +49,9 @@ public class HealthMachine : MonoBehaviour
         if (Time.time >= messageUntil)
             prompt.text = fullHealth
                 ? "<color=#73FF91>HEALTH FULL</color>"
-                : "[E] HEALTH STATION - " + healPrice + " COINS\nFULL HEAL";
+                : GameInput.InteractHint + " HEALTH STATION - " + healPrice + " COINS\nFULL HEAL";
 
-        if (fullHealth || Keyboard.current == null ||
-            !Keyboard.current.eKey.wasPressedThisFrame || Time.time < messageUntil) return;
+        if (fullHealth || Time.time < messageUntil || !GameInput.TryInteract()) return;
 
         if (CoinManager.Instance == null || !CoinManager.Instance.TrySpendCoins(healPrice))
         {
