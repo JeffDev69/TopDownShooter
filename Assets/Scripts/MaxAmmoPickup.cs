@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// Maakt collectable Max Ammo, Insta-Kill en Nuke drops zonder aparte prefab setup.
+// Maakt oppakbare Max Ammo-, Insta-Kill- en Nuke-drops zonder aparte prefabinstellingen.
 public class MaxAmmoPickup : MonoBehaviour
 {
     public enum PowerUpType { MaxAmmo, InstaKill, Nuke }
@@ -26,18 +26,21 @@ public class MaxAmmoPickup : MonoBehaviour
         if (player != null) playerHealth = player.GetComponent<PlayerHealth>();
         expiresAt = Time.time + lifetime;
         label = gameObject.AddComponent<TextMeshPro>();
-        label.text = "<b>MAX\nAMMO</b>";
         label.fontSize = 4f;
-        label.color = new Color(0.35f, 1f, 0.45f);
-        if (powerUpType == PowerUpType.InstaKill)
+        switch (powerUpType)
         {
-            label.text = "<b>INSTA\nKILL</b>";
-            label.color = new Color(1f, 0.35f, 0.35f);
-        }
-        else if (powerUpType == PowerUpType.Nuke)
-        {
-            label.text = "<b>NUKE</b>";
-            label.color = new Color(1f, 0.85f, 0.15f);
+            case PowerUpType.InstaKill:
+                label.text = "<b>INSTA\nKILL</b>";
+                label.color = new Color(1f, 0.35f, 0.35f);
+                break;
+            case PowerUpType.Nuke:
+                label.text = "<b>NUKE</b>";
+                label.color = new Color(1f, 0.85f, 0.15f);
+                break;
+            default:
+                label.text = "<b>MAX\nAMMO</b>";
+                label.color = new Color(0.35f, 1f, 0.45f);
+                break;
         }
         label.alignment = TextAlignmentOptions.Center;
         label.rectTransform.sizeDelta = new Vector2(2f, 1f);

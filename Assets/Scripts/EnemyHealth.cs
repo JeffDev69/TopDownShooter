@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-// Regelt zombie health, hit feedback, death rewards, corpses en random power-up drops.
+// Regelt de gezondheid van zombies, trefferfeedback, beloningen, lichamen en willekeurige power-ups.
 public class EnemyHealth : MonoBehaviour
 {
     public int health = 3;
@@ -118,7 +118,7 @@ public class EnemyHealth : MonoBehaviour
         health = 0;
         StopAllCoroutines();
         SpawnBlood();
-        // Nuke kills still award coins and count toward the round, but do not drop more power-ups.
+        // Uitschakelingen door een atoombom leveren nog steeds munten op en tellen mee voor de ronde, maar laten geen nieuwe power-ups vallen.
         StartCoroutine(Die(false, false));
     }
 
@@ -135,7 +135,7 @@ public class EnemyHealth : MonoBehaviour
     {
         isDead = true;
 
-        // Special zombies mogen hier hun eigen death effect uitvoeren.
+        // Speciale zombies kunnen hier hun eigen sterfeffect uitvoeren.
         if (triggerDeathEffects)
             Died?.Invoke(this);
 
@@ -184,7 +184,7 @@ public class EnemyHealth : MonoBehaviour
 
         SpawnBloodPool();
 
-        // Het oude corpse verdwijnt; de losse blood pool blijft zelfstandig liggen.
+        // Het lichaam verdwijnt; de losse bloedplas blijft zelfstandig liggen.
         if (spriteRenderer != null)
             spriteRenderer.enabled = false;
 

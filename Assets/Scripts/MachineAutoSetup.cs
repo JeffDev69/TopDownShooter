@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// Activeert de machines bij iedere scene-load, ook na Restart.
+// Activeert de automaten telkens als de scène wordt geladen, ook na herstarten.
 public static class MachineAutoSetup
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -15,7 +15,7 @@ public static class MachineAutoSetup
     {
         foreach (GameObject root in scene.GetRootGameObjects())
         {
-            // Include inactive objects so their machines also work when enabled later.
+            // Neem ook inactieve objecten mee, zodat hun automaten werken zodra ze worden ingeschakeld.
             foreach (SpriteRenderer renderer in root.GetComponentsInChildren<SpriteRenderer>(true))
                 ConfigureMachineFromSprite(renderer);
 

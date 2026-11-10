@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Configureert een wall object dat door het level collision system wordt gebruikt.
+// Configureert een muurobject dat door het botsingssysteem van het level wordt gebruikt.
 public class wall : MonoBehaviour
 {
     void OnCollisionEnter2D(Collision2D collision)

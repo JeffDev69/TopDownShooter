@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Tekent een korte expanding ring voor rocket explosions zonder extra prefab.
+// Tekent een kort uitzettende ring voor raketexplosies zonder extra prefab.
 public class WeaponExplosionEffect : MonoBehaviour
 {
     private LineRenderer ring;

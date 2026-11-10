@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Maakt alleen voor de boss een world-space health bar die recht boven hem blijft.
+// Maakt voor de baas een gezondheidsbalk in de spelwereld die boven hem blijft staan.
 public class BossHealthBar : MonoBehaviour
 {
     public float heightAboveBoss = 1.8f;

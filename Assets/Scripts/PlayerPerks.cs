@@ -3,7 +3,7 @@ using System.Text;
 using TMPro;
 using UnityEngine;
 
-// Onthoudt purchased perks en activeert elk permanent effect maar één keer per run.
+// Onthoudt gekochte voordelen en activeert elk permanent effect maar één keer per spelsessie.
 public class PlayerPerks : MonoBehaviour
 {
     private readonly HashSet<PerkMachine.PerkType> owned = new HashSet<PerkMachine.PerkType>();
@@ -67,7 +67,7 @@ public class PlayerPerks : MonoBehaviour
         return true;
     }
 
-    // Maakt automatisch een HUD onder de hearts; er is geen Inspector setup nodig.
+    // Maakt automatisch een HUD onder de hartjes; instellen via de Inspector is niet nodig.
     private void CreatePerkHud()
     {
         Canvas canvas = FindFirstObjectByType<Canvas>();
@@ -81,7 +81,7 @@ public class PlayerPerks : MonoBehaviour
         rect.anchorMin = new Vector2(0f, 1f);
         rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
-        rect.anchoredPosition = new Vector2(20f, -140f);
+        rect.anchoredPosition = new Vector2(0f, -140f);
         rect.sizeDelta = new Vector2(520f, 300f);
 
         perkHud = hudObject.AddComponent<TextMeshProUGUI>();

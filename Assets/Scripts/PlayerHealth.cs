@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 
-// Trackt player hearts, laat damage feedback zien, verwerkt health upgrades en regelt death.
+// Houdt de hartjes van de speler bij, toont trefferfeedback, verwerkt gezondheidsverbeteringen en regelt het overlijden.
 public class PlayerHealth : MonoBehaviour
 {
     public int maxHealth = 5;
@@ -68,7 +68,7 @@ public class PlayerHealth : MonoBehaviour
             playerSprite.color = hitFlashColor;
         }
 
-        // Never resize the root collider during the hit effect.
+        // Verander de grootte van de collider op het hoofdobject nooit tijdens het treffereffect.
         if (playerSprite != null && playerSprite.transform != transform)
             playerSprite.transform.localScale = new Vector3(
                 normalScale.x * hitScaleMultiplier,

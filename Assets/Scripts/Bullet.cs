@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Regelt bullet movement, doet damage bij een zombie-hit en verwijdert daarna de projectile.
+// Beweegt de kogel, brengt schade toe bij een treffer op een zombie en verwijdert daarna het projectiel.
 public class Bullet : MonoBehaviour
 {
     public float speed = 5f;
@@ -47,11 +47,11 @@ public class Bullet : MonoBehaviour
         if (destroyedByHit || hitCollider == null) return;
         GameObject hitObject = hitCollider.gameObject;
 
-        // Do not destroy the bullet if it touches the player
+        // Vernietig de kogel niet als deze de speler raakt.
         if (hitObject.CompareTag("Player"))
             return;
 
-        // Enemy spit should not block player bullets.
+        // Zuurprojectielen van vijanden mogen kogels van de speler niet tegenhouden.
         if (hitObject.GetComponentInParent<AcidProjectile>() != null)
             return;
 
@@ -71,7 +71,7 @@ public class Bullet : MonoBehaviour
             return;
         }
 
-        // Destroy bullet when it hits something else, like a wall
+        // Vernietig de kogel als deze iets anders raakt, zoals een muur.
         destroyedByHit = true;
         Destroy(gameObject);
     }
@@ -96,7 +96,7 @@ public class Bullet : MonoBehaviour
 
         foreach (var target in visibleEnemies)
         {
-            // Direct hits keep their punch; enemies at the blast edge take reduced splash damage.
+            // Een directe treffer doet volledige schade; vijanden aan de rand van de explosie krijgen minder schade.
             float falloff = Mathf.InverseLerp(explosionRadius * 0.25f, explosionRadius, target.Value);
             int splashDamage = Mathf.Max(1, Mathf.RoundToInt(explosionDamage * Mathf.Lerp(1f, 0.35f, falloff)));
             target.Key.TakeDamage(splashDamage);
@@ -112,8 +112,8 @@ public class Bullet : MonoBehaviour
         if (impactCollider == null || impactCollider.isTrigger ||
             impactCollider.GetComponentInParent<EnemyHealth>() != null) return origin;
 
-        // A trigger projectile can already overlap the wall when the hit arrives. Put the
-        // blast just outside its entry surface so the wall only shields its far side.
+        // Een projectiel met een trigger kan bij de inslag al in de muur zitten. Plaats de
+        // explosie net buiten het raakvlak, zodat de muur alleen de andere kant afschermt.
         Vector2 direction = transform.right;
         float backtrack = Vector2.Distance(origin, impactCollider.bounds.center) +
             impactCollider.bounds.extents.magnitude + 0.05f;

@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// Reusable heal station: betaal coins om alle verloren hearts terug te krijgen.
+// Herbruikbaar genezingsstation: betaal munten om alle verloren hartjes terug te krijgen.
 public class HealthMachine : MonoBehaviour
 {
     public int healPrice = 200;

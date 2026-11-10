@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Maakt tijdens het schieten een korte procedural muzzle flash zonder extra sprite asset.
+// Maakt tijdens het schieten een korte, zelfgemaakte mondingsflits zonder extra sprite.
 public class GunMuzzleFlash : MonoBehaviour
 {
     public float flashDuration = 0.045f;
@@ -17,7 +17,7 @@ public class GunMuzzleFlash : MonoBehaviour
         flashRoot.SetParent(muzzle, false);
         flashRoot.localPosition = Vector3.zero;
         flashRoot.localRotation = Quaternion.identity;
-        // Keep flash dimensions consistent despite the player's scaled hierarchy.
+        // Houd de afmetingen van de flits gelijk, ook als de hiërarchie van de speler is geschaald.
         Vector3 scale = muzzle.lossyScale;
         flashRoot.localScale = new Vector3(
             1f / Mathf.Max(0.001f, Mathf.Abs(scale.x)),

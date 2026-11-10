@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-// Explodeert bij de player of bij death en doet area damage.
+// Explodeert bij de speler of bij overlijden en brengt schade toe in de omgeving.
 [RequireComponent(typeof(EnemyHealth))]
 public class ExploderZombie : MonoBehaviour
 {

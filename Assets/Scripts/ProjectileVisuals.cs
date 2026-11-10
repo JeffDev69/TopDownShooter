@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Geeft special weapon bullets een herkenbare kleur, size en trail.
+// Geeft kogels van speciale wapens een herkenbare kleur, grootte en spoor.
 public static class ProjectileVisuals
 {
     private static Material trailMaterial;

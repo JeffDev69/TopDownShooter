@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Leest WASD input en beweegt de Rigidbody2D van de player met een constante move speed.
+// Leest de WASD-toetsen en beweegt de Rigidbody2D van de speler met een constante snelheid.
 public class PlayerMovement : MonoBehaviour
 {
     public float moveSpeed = 5f;

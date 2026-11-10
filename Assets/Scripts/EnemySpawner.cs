@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-// Beheert endless rounds, mixt zombie types en trackt hoeveel enemies over zijn.
+// Beheert eindeloze rondes, wisselt zombiesoorten af en houdt bij hoeveel vijanden er over zijn.
 public class EnemySpawner : MonoBehaviour
 {
     public enum SpecialRoundType { Normal, FastRush, TankWave, ArmoredWave, SpitterSwarm }
@@ -126,36 +126,24 @@ public class EnemySpawner : MonoBehaviour
     {
         Vector2 spawnPosition;
 
-        // Pick a random side of the arena
+        // Kies een willekeurige kant van de arena.
         int side = Random.Range(0, 4);
 
-        if (side == 0) // Top
+        if (side == 0) // Boven
         {
-            spawnPosition = new Vector2(
-                Random.Range(minX, maxX),
-                maxY
-            );
+            spawnPosition = new Vector2(Random.Range(minX, maxX), maxY);
         }
-        else if (side == 1) // Bottom
+        else if (side == 1) // Onder
         {
-            spawnPosition = new Vector2(
-                Random.Range(minX, maxX),
-                minY
-            );
+            spawnPosition = new Vector2(Random.Range(minX, maxX), minY);
         }
-        else if (side == 2) // Left
+        else if (side == 2) // Links
         {
-            spawnPosition = new Vector2(
-                minX,
-                Random.Range(minY, maxY)
-            );
+            spawnPosition = new Vector2(minX, Random.Range(minY, maxY));
         }
-        else // Right
+        else // Rechts
         {
-            spawnPosition = new Vector2(
-                maxX,
-                Random.Range(minY, maxY)
-            );
+            spawnPosition = new Vector2(maxX, Random.Range(minY, maxY));
         }
 
         GameObject selectedPrefab = forceBoss ? bossPrefab : PickSpawnPrefab();
@@ -232,7 +220,7 @@ public class EnemySpawner : MonoBehaviour
 
     private void ApplyRoundScaling(GameObject zombie, EnemyHealth zombieHealth, bool boss)
     {
-        // Elke paar rounds krijgt iedere zombie extra health.
+        // Om de paar rondes krijgt elke zombie extra gezondheid.
         int healthSteps = (CurrentRound - 1) / Mathf.Max(1, healthIncreaseEveryRounds);
         zombieHealth.health += healthSteps * Mathf.Max(0, healthAddedPerStep);
 

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Central audio controller for recorded gameplay audio and small UI cues.
+// Centrale audioregelaar voor spelgeluiden en korte UI-geluiden.
 public sealed class GameAudio : MonoBehaviour
 {
     public enum Cue

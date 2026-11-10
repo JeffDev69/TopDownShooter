@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// Laat de zombie de player chasen en damage doen zolang er contact is.
+// Laat de zombie de speler achtervolgen en schade toebrengen zolang er contact is.
 public class EnemyMovement : MonoBehaviour
 {
     public float moveSpeed = 2f;
@@ -23,10 +24,12 @@ public class EnemyMovement : MonoBehaviour
     {
         useTriggers = false
     };
+    private static readonly List<RaycastHit2D> ObstacleHits = new List<RaycastHit2D>(16);
 
     private Transform player;
     private Rigidbody2D rb;
     private Collider2D[] ownColliders;
+    private readonly ObstacleNavigator obstacleNavigator = new ObstacleNavigator();
 
     private float nextDamageTime;
     private float laneSide;
@@ -67,12 +70,14 @@ public class EnemyMovement : MonoBehaviour
         }
 
         float speedScale;
+        Vector2 travelDirection = obstacleNavigator.GetDirection(transform.position,
+            player.position, CurrentPersonalSpace * 0.5f);
         Vector2 crowdSteering = CalculateCrowdSteering(
             gameObject,
             rb,
             ownColliders,
             transform.position,
-            direction,
+            travelDirection,
             moveSpeed,
             CurrentPersonalSpace,
             crowdLookRadius,
@@ -83,15 +88,15 @@ public class EnemyMovement : MonoBehaviour
             yieldStrength,
             out speedScale);
 
-        Vector2 moveDirection = direction + crowdSteering;
+        Vector2 moveDirection = travelDirection + crowdSteering;
 
         if (moveDirection.sqrMagnitude < 0.001f)
-            moveDirection = direction;
+            moveDirection = travelDirection;
         else
         {
             moveDirection.Normalize();
-            if (Vector2.Dot(moveDirection, direction) < 0.75f)
-                moveDirection = Vector2.Lerp(moveDirection, direction, 0.7f).normalized;
+            if (Vector2.Dot(moveDirection, travelDirection) < 0.75f)
+                moveDirection = Vector2.Lerp(moveDirection, travelDirection, 0.7f).normalized;
         }
 
         Vector2 targetVelocity = moveDirection * moveSpeed * speedScale;
@@ -109,6 +114,211 @@ public class EnemyMovement : MonoBehaviour
 
     public float CurrentPersonalSpace =>
         personalSpace * Mathf.Max(1f, transform.lossyScale.x, transform.lossyScale.y);
+
+    public sealed class ObstacleNavigator
+    {
+        private const float GridSize = 0.8f;
+        private static readonly Vector2Int[] Neighbours =
+        {
+            Vector2Int.up, Vector2Int.right, Vector2Int.down, Vector2Int.left
+        };
+        private static readonly List<Collider2D> StaticHits = new List<Collider2D>(16);
+
+        private readonly List<Vector2> path = new List<Vector2>();
+        private readonly Dictionary<Vector2Int, bool> walkable = new Dictionary<Vector2Int, bool>();
+        private readonly Dictionary<Vector2Int, float> distance = new Dictionary<Vector2Int, float>();
+        private readonly Dictionary<Vector2Int, Vector2Int> previous = new Dictionary<Vector2Int, Vector2Int>();
+        private readonly HashSet<Vector2Int> visited = new HashSet<Vector2Int>();
+        private readonly List<Vector2Int> open = new List<Vector2Int>();
+        private int pathIndex;
+        private float nextSearchTime;
+        private Vector2 pathTarget;
+
+        public Vector2 GetDirection(Vector2 position, Vector2 target, float radius)
+        {
+            Vector2 toTarget = target - position;
+            if (toTarget.sqrMagnitude < 0.001f)
+                return Vector2.zero;
+
+            radius = Mathf.Max(0.18f, radius);
+            if (HasClearPath(position, target, radius))
+            {
+                path.Clear();
+                return toTarget.normalized;
+            }
+
+            if (Time.time >= nextSearchTime ||
+                (target - pathTarget).sqrMagnitude > 4f)
+            {
+                nextSearchTime = Time.time + 1f;
+                pathTarget = target;
+                FindPath(position, target, radius);
+            }
+
+            while (pathIndex < path.Count &&
+                   (path[pathIndex] - position).sqrMagnitude < 0.25f)
+                pathIndex++;
+
+            // Sla tussenpunten over zodra de doorgang vrij is.
+            for (int i = path.Count - 1; i > pathIndex; i--)
+            {
+                if (HasClearPath(position, path[i], radius))
+                {
+                    pathIndex = i;
+                    break;
+                }
+            }
+
+            return pathIndex < path.Count
+                ? (path[pathIndex] - position).normalized
+                : toTarget.normalized;
+        }
+
+        private void FindPath(Vector2 position, Vector2 target, float radius)
+        {
+            path.Clear();
+            pathIndex = 0;
+            walkable.Clear();
+            distance.Clear();
+            previous.Clear();
+            visited.Clear();
+            open.Clear();
+
+            Vector2Int start = ToCell(position);
+            if (!IsWalkable(start, radius) || !HasClearPath(position, ToWorld(start), radius))
+            {
+                float closest = float.MaxValue;
+                bool found = false;
+                Vector2Int center = start;
+                for (int x = -2; x <= 2; x++)
+                {
+                    for (int y = -2; y <= 2; y++)
+                    {
+                        Vector2Int candidate = center + new Vector2Int(x, y);
+                        Vector2 point = ToWorld(candidate);
+                        float sqrDistance = (point - position).sqrMagnitude;
+                        if (sqrDistance < closest && IsWalkable(candidate, radius) &&
+                            HasClearPath(position, point, radius))
+                        {
+                            start = candidate;
+                            closest = sqrDistance;
+                            found = true;
+                        }
+                    }
+                }
+
+                if (!found)
+                    return;
+            }
+
+            open.Add(start);
+            distance[start] = 0f;
+
+            while (open.Count > 0 && visited.Count < 3000)
+            {
+                int bestIndex = 0;
+                float bestScore = float.MaxValue;
+                for (int i = 0; i < open.Count; i++)
+                {
+                    Vector2Int candidate = open[i];
+                    float score = distance[candidate] + Vector2.Distance(ToWorld(candidate), target);
+                    if (score < bestScore)
+                    {
+                        bestScore = score;
+                        bestIndex = i;
+                    }
+                }
+
+                Vector2Int current = open[bestIndex];
+                open.RemoveAt(bestIndex);
+                if (!visited.Add(current))
+                    continue;
+
+                Vector2 currentPosition = ToWorld(current);
+                if (current != start &&
+                    (currentPosition - target).sqrMagnitude < 2f &&
+                    HasClearPath(currentPosition, target, radius))
+                {
+                    for (Vector2Int step = current; step != start; step = previous[step])
+                        path.Add(ToWorld(step));
+                    path.Reverse();
+                    if ((ToWorld(start) - position).sqrMagnitude > 0.25f)
+                        path.Insert(0, ToWorld(start));
+                    path.Add(target);
+                    return;
+                }
+
+                foreach (Vector2Int offset in Neighbours)
+                {
+                    Vector2Int neighbour = current + offset;
+                    if (visited.Contains(neighbour) || !IsWalkable(neighbour, radius))
+                        continue;
+
+                    float newDistance = distance[current] + GridSize;
+                    if (distance.TryGetValue(neighbour, out float oldDistance) &&
+                        newDistance >= oldDistance)
+                        continue;
+
+                    distance[neighbour] = newDistance;
+                    previous[neighbour] = current;
+                    if (!open.Contains(neighbour))
+                        open.Add(neighbour);
+                }
+            }
+        }
+
+        private bool IsWalkable(Vector2Int cell, float radius)
+        {
+            if (walkable.TryGetValue(cell, out bool result))
+                return result;
+
+            StaticHits.Clear();
+            Physics2D.OverlapCircle(ToWorld(cell), radius + 0.05f,
+                CrowdContactFilter, StaticHits);
+            result = true;
+            foreach (Collider2D hit in StaticHits)
+            {
+                if (hit != null && hit.attachedRigidbody == null)
+                {
+                    result = false;
+                    break;
+                }
+            }
+
+            walkable[cell] = result;
+            return result;
+        }
+
+        private static bool HasClearPath(Vector2 start, Vector2 end, float radius)
+        {
+            Vector2 direction = end - start;
+            float length = direction.magnitude;
+            if (length < 0.01f)
+                return true;
+
+            ObstacleHits.Clear();
+            Physics2D.CircleCast(start, radius, direction / length,
+                CrowdContactFilter, ObstacleHits, length);
+            foreach (RaycastHit2D hit in ObstacleHits)
+            {
+                if (hit.collider != null && hit.collider.attachedRigidbody == null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static Vector2Int ToCell(Vector2 position)
+        {
+            return new Vector2Int(Mathf.RoundToInt(position.x / GridSize),
+                Mathf.RoundToInt(position.y / GridSize));
+        }
+
+        private static Vector2 ToWorld(Vector2Int cell)
+        {
+            return new Vector2(cell.x * GridSize, cell.y * GridSize);
+        }
+    }
 
     public static Vector2 CalculateCrowdSteering(
         GameObject owner,

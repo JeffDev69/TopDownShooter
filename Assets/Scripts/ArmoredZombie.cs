@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Geeft de armored zombie extra health en reduceert incoming damage.
+// Geeft de gepantserde zombie extra gezondheid en vermindert ontvangen schade.
 [RequireComponent(typeof(EnemyHealth))]
 public class ArmoredZombie : MonoBehaviour
 {

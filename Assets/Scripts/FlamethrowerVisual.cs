@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Builds a layered, textured flame cone that briefly remains visible while firing.
+// Tekent een gelaagde vlamkegel die tijdens het schieten nog even zichtbaar blijft.
 public class FlamethrowerVisual : MonoBehaviour
 {
     public float visibleDuration = 0.2f;

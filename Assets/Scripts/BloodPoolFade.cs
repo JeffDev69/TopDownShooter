@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Laat een blood pool even liggen en daarna smooth wegfaden.
+// Laat een bloedplas even liggen en daarna geleidelijk vervagen.
 public class BloodPoolFade : MonoBehaviour
 {
     private SpriteRenderer poolRenderer;

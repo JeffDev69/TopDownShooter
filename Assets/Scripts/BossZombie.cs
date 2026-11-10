@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Maakt iedere vijfde round boss groter, sterker en sneller wanneer hij bijna dood is.
+// Maakt de baas van elke vijfde ronde groter, sterker en sneller wanneer hij bijna verslagen is.
 [RequireComponent(typeof(EnemyHealth))]
 public class BossZombie : MonoBehaviour
 {
@@ -41,7 +41,7 @@ public class BossZombie : MonoBehaviour
 
     void Start()
     {
-        // Start runs after de spawner zijn round health heeft toegevoegd.
+        // Start draait nadat de spawner de extra gezondheid voor de ronde heeft toegevoegd.
         startingHealth = health.health;
         if (GetComponent<BossHealthBar>() == null)
             gameObject.AddComponent<BossHealthBar>();

@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// Laat de player coins uitgeven voor een random weapon en toont dichtbij een world-space prompt.
+// Laat de speler munten uitgeven voor een willekeurig wapen en toont dichtbij een melding in de spelwereld.
 public class MysteryBox : MonoBehaviour
 {
     public int price = 100;
@@ -26,7 +26,7 @@ public class MysteryBox : MonoBehaviour
         if (boxRenderer != null)
             originalBoxColor = boxRenderer.color;
 
-        // Replace the old screen-space label with the same world-space style as perk machines.
+        // Vervang het oude schermlabel door een label in de spelwereld, in dezelfde stijl als de perkautomaten.
         if (messageText != null)
             messageText.gameObject.SetActive(false);
         GameObject label = new GameObject("Mystery Box Prompt");

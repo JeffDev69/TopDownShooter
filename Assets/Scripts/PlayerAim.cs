@@ -3,7 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 [DefaultExecutionOrder(-100)]
-// Draait alleen de visual en weapon pivot naar de mouse zodat de physics root stabiel blijft.
+// Draait alleen het beeld en het draaipunt van het wapen naar de muis, zodat de fysicaroot stabiel blijft.
 public class PlayerAim : MonoBehaviour
 {
     private Camera mainCamera;
@@ -21,7 +21,7 @@ public class PlayerAim : MonoBehaviour
     {
         mainCamera = Camera.main;
 
-        // Keep physics on the root; rotate only this visual hierarchy.
+        // Laat de fysica op het hoofdobject en draai alleen deze visuele hiërarchie.
         aimPivot = new GameObject("AimPivot").transform;
         aimPivot.SetParent(transform, false);
 
@@ -113,7 +113,7 @@ public class PlayerAim : MonoBehaviour
             facing.x * weaponSprites.WeaponScale, facing.y * weaponSprites.WeaponScale, 1f);
         if (shooting != null && shooting.firePoint != null && shooting.firePoint != transform)
         {
-            // Match the visible barrel, including the player's damage-scale animation.
+            // Volg de zichtbare loop, ook tijdens de schaalanimatie wanneer de speler schade krijgt.
             if (weaponRenderer.enabled)
             {
                 shooting.firePoint.position = weaponRenderer.transform.TransformPoint(

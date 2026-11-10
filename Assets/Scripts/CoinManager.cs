@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// Beheert de coins van de player, verwerkt purchases en update de coin counter in de HUD.
+// Beheert de munten van de speler, verwerkt aankopen en werkt de muntenteller in de HUD bij.
 public class CoinManager : MonoBehaviour
 {
     public static CoinManager Instance { get; private set; }

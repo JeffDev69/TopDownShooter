@@ -1,10 +1,10 @@
 using TMPro;
 using UnityEngine;
 
-// Reusable machine waarmee de player permanent perks kan kopen.
+// Herbruikbare automaat waarmee de speler blijvende voordelen kan kopen.
 public class PerkMachine : MonoBehaviour
 {
-    // Nieuwe perks staan achteraan zodat bestaande scene values hetzelfde blijven.
+    // Nieuwe voordelen staan achteraan zodat bestaande scènewaarden hetzelfde blijven.
     public enum PerkType
     {
         VitalityBrew,

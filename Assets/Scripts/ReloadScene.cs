@@ -1,10 +1,11 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
-// Reloadt de current scene wanneer de player op de restart UI button klikt.
+// Laadt de huidige scène opnieuw wanneer de speler op de herstartknop klikt.
 public class ReloadScene : MonoBehaviour
 {
     public void ReloadCurrentScene()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

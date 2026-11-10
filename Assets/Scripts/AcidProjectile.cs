@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Runtime acid shot zodat de Spitter geen apart projectile prefab nodig heeft.
+// Maakt het zuurprojectiel tijdens het spelen aan, zodat de Spitter geen aparte prefab nodig heeft.
 public class AcidProjectile : MonoBehaviour
 {
     private int damage;

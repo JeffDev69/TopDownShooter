@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Houdt afstand van de player en schiet green acid projectiles.
+// Houdt afstand van de speler en schiet groene zuurprojectielen.
 [RequireComponent(typeof(Rigidbody2D))]
 public class SpitterZombie : MonoBehaviour
 {
@@ -25,6 +25,7 @@ public class SpitterZombie : MonoBehaviour
     private Transform player;
     private Rigidbody2D body;
     private Collider2D[] ownColliders;
+    private readonly EnemyMovement.ObstacleNavigator obstacleNavigator = new EnemyMovement.ObstacleNavigator();
     private float nextShotTime;
     private float laneSide;
 
@@ -74,6 +75,11 @@ public class SpitterZombie : MonoBehaviour
             desiredDirection = -direction;
             desiredSpeed = moveSpeed;
         }
+
+        if (desiredDirection.sqrMagnitude > 0.001f)
+            desiredDirection = obstacleNavigator.GetDirection(transform.position,
+                (Vector2)transform.position + desiredDirection * preferredDistance,
+                CurrentPersonalSpace * 0.5f);
 
         Vector2 crowdForward = desiredDirection.sqrMagnitude > 0.001f
             ? desiredDirection.normalized

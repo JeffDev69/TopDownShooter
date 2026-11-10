@@ -1,7 +1,7 @@
 using UnityEngine;
 using TMPro;
 
-// Update de round counter en houdt de text zichtbaar boven het HUD panel.
+// Werkt de rondeteller bij en houdt de tekst zichtbaar boven het HUD-paneel.
 public class ScoreManager : MonoBehaviour
 {
     public TextMeshProUGUI scoreText;
@@ -11,15 +11,14 @@ public class ScoreManager : MonoBehaviour
         if (scoreText == null) scoreText = GetComponent<TextMeshProUGUI>();
         if (scoreText != null)
         {
-            // Restore the counter on top of its background, regardless of Inspector layout changes.
+            // Zet de teller boven op de achtergrond, ongeacht wijzigingen in de Inspector-indeling.
             GameObject panel = GameObject.Find("RoundsPanel");
-            if (panel != null && panel.transform is RectTransform)
+            if (panel != null && panel.transform is RectTransform panelRect)
             {
-                RectTransform panelRect = (RectTransform)panel.transform;
                 panelRect.anchorMin = Vector2.one;
                 panelRect.anchorMax = Vector2.one;
                 panelRect.pivot = Vector2.one;
-                panelRect.anchoredPosition = new Vector2(-30f, -30f);
+                panelRect.anchoredPosition = Vector2.zero;
                 panelRect.sizeDelta = new Vector2(450f, 150f);
                 panelRect.localScale = Vector3.one;
                 RectTransform rect = scoreText.rectTransform;
@@ -39,7 +38,7 @@ public class ScoreManager : MonoBehaviour
             }
             scoreText.gameObject.SetActive(true);
             scoreText.enabled = true;
-            // A separate sorting canvas prevents other HUD images from covering this text.
+            // Een apart sorteercanvas voorkomt dat andere HUD-afbeeldingen deze tekst bedekken.
             Canvas textCanvas = scoreText.GetComponent<Canvas>();
             if (textCanvas == null) textCanvas = scoreText.gameObject.AddComponent<Canvas>();
             textCanvas.overrideSorting = true;
@@ -59,7 +58,7 @@ public class ScoreManager : MonoBehaviour
         }
     }
 
-    // Keep the existing component and text reference so scene wiring is preserved.
+    // Behoud het bestaande component en de tekstverwijzing, zodat de scèneverbindingen blijven werken.
     public void ShowRound(int round, int remaining, bool cleared)
     {
         ShowRound(round, remaining, cleared, "");

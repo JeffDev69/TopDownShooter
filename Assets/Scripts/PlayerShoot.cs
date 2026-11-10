@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
-// Regelt twee weapon slots, shooting, ammo, reloads, melee en de weapon HUD text.
+// Regelt twee wapenvakken, schieten, munitie, herladen, slagaanvallen en de wapentekst in de HUD.
 public class PlayerShoot : MonoBehaviour
 {
     public enum WeaponType
@@ -49,7 +49,7 @@ public class PlayerShoot : MonoBehaviour
     public float reloadDuration = 1.5f;
     private int damageMultiplier = 1;
     private float rapidFireScale = 1f;
-    // Carry fractional upgrade damage forward instead of rounding every pellet up.
+    // Tel breukdelen van extra schade mee in plaats van elke hagelkorrel naar boven af te ronden.
     private readonly float[] damageRemainders = new float[2];
     private readonly int[] magazineAmmo = new int[2];
     private readonly int[] reserveAmmo = new int[2];
@@ -301,7 +301,7 @@ public class PlayerShoot : MonoBehaviour
             return;
         }
 
-        // A shotgun volley consumes one shell, not one round per pellet.
+        // Een schot met het hagelgeweer verbruikt één patroon, niet één per hagelkorrel.
         magazineAmmo[activeSlot]--;
         UpdateWeaponText();
         if (muzzleFlash != null) muzzleFlash.Show(firePoint, CurrentWeapon);
@@ -310,7 +310,7 @@ public class PlayerShoot : MonoBehaviour
         float spread = SpreadFor(CurrentWeapon);
         var ignoredColliders = new List<Collider2D>(GetComponentsInChildren<Collider2D>());
 
-        // Ignore older bullets as well as pellets from this shot.
+        // Negeer bestaande kogels en de hagelkorrels van dit schot.
         foreach (Bullet existingBullet in FindObjectsByType<Bullet>(FindObjectsSortMode.None))
             ignoredColliders.AddRange(existingBullet.GetComponentsInChildren<Collider2D>());
 
@@ -330,7 +330,7 @@ public class PlayerShoot : MonoBehaviour
                 firePoint.rotation * Quaternion.Euler(0f, 0f, angleOffset)
             );
 
-            // Configure this instance, never the shared bullet prefab.
+            // Stel deze kogel in, nooit de gedeelde kogelprefab.
             Bullet bullet = projectile.GetComponent<Bullet>();
             if (bullet != null)
             {
@@ -458,7 +458,7 @@ public class PlayerShoot : MonoBehaviour
         GiveWeapon(WeaponType.Shotgun);
     }
 
-    // Public so a UI button can also call this attack later.
+    // Publiek zodat een UI-knop deze aanval later ook kan starten.
     public void GunBash()
     {
         if (!isActiveAndEnabled || firePoint == null || Time.time < nextMeleeTime) return;
@@ -518,7 +518,7 @@ public class PlayerShoot : MonoBehaviour
 
     private void GiveWeapon(WeaponType weapon, WeaponRarity rarity)
     {
-        // First reward fills slot two. Later rewards replace only the held gun.
+        // De eerste beloning vult het tweede vak; latere beloningen vervangen alleen het vastgehouden wapen.
         if (weaponSlots[1] == WeaponType.Empty)
             activeSlot = 1;
 
@@ -638,7 +638,7 @@ public class PlayerShoot : MonoBehaviour
             case WeaponType.DoubleBarrel:
             case WeaponType.AA12:
                 bullet.damage = 1;
-                // Pellets are close-range crowd control, with no map-wide reach.
+                // Hagelkorrels werken op korte afstand en raken geen vijanden aan de andere kant van de kaart.
                 float range = weapon == WeaponType.AA12 ? 6f :
                     weapon == WeaponType.DoubleBarrel ? 6.5f :
                     weapon == WeaponType.SPAS12 ? 8f : 7.5f;
@@ -828,7 +828,7 @@ public class PlayerShoot : MonoBehaviour
 
     public void ApplyRapidFirePerk()
     {
-        // 25% more shots per second, including variants with fixed base delays.
+        // Schiet 25% vaker per seconde, ook met varianten die een vaste basisvertraging hebben.
         rapidFireScale = 1f / 1.25f;
     }
 
@@ -840,7 +840,7 @@ public class PlayerShoot : MonoBehaviour
 
     public void ActivateInstaKill()
     {
-        // A second pickup refreshes the duration instead of stacking unlimited time.
+        // Een tweede pickup start de looptijd opnieuw in plaats van onbeperkt tijd op te stapelen.
         instaKillUntil = Time.time + Mathf.Max(1f, instaKillDuration);
         displayedInstaKillSeconds = Mathf.CeilToInt(instaKillDuration);
         UpdateWeaponText();
@@ -903,7 +903,7 @@ public class PlayerShoot : MonoBehaviour
             return baseSize;
 
         float perTierBonus = Mathf.Max(0f, packedMagazineMultiplier - 1f);
-        // A whole-number bonus such as 80 * 1.6 must not gain a round from float error.
+        // Een heel getal zoals 80 * 1,6 mag door afrondingsfouten geen extra punt krijgen.
         return Mathf.Max(baseSize + 1, Mathf.CeilToInt(baseSize * (1f + perTierBonus * packTiers[slot]) - 0.0001f));
     }
 

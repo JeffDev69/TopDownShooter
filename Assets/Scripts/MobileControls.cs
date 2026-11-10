@@ -53,7 +53,7 @@ public class MobileControls : MonoBehaviour
         instance = this;
         health = GetComponent<PlayerHealth>();
         shooting = GetComponent<PlayerShoot>();
-        // A touchscreen-equipped PC should still start with mouse/keyboard controls.
+        // Schakel de aanraakbediening in op mobiel of nadat een aanraking is gedetecteerd.
         touchMode = Application.isMobilePlatform || touchUsed;
     }
 
@@ -111,7 +111,7 @@ public class MobileControls : MonoBehaviour
                 if (ended) aimFinger = -1;
             }
         }
-        // Also release controls when a browser loses a touch without an Ended event.
+
         if (!moveSeen)
         {
             moveFinger = -1;
@@ -129,7 +129,7 @@ public class MobileControls : MonoBehaviour
     private void LateUpdate()
     {
         if (!touchMode || canvas == null) return;
-        // Run after the existing HUD components have initialized their references.
+        // Onderdelen van de oorspronkelijke HUD.
         if (originalHud == null)
         {
             originalHud = new[] { GameObject.Find("WeaponsPanel"), GameObject.Find("CoinsPanel"),
@@ -175,10 +175,10 @@ public class MobileControls : MonoBehaviour
         meleeButton = ActionButton("MELEE", new Vector2(-118f, 280f));
         interactButton = ActionButton("USE", new Vector2(-278f, 280f));
 
-        healthLabel = Panel("Health", new Vector2(0f, 1f), new Vector2(126f, -32f), new Vector2(228f, 44f), 26f);
-        coinsLabel = Panel("Coins", new Vector2(0.5f, 1f), new Vector2(0f, -32f), new Vector2(210f, 44f), 23f);
-        roundsLabel = Panel("Rounds", Vector2.one, new Vector2(-155f, -46f), new Vector2(286f, 72f), 23f);
-        weaponLabel = Panel("Weapons", new Vector2(0f, 1f), new Vector2(236f, -118f), new Vector2(448f, 104f), 22f);
+        healthLabel = Panel("Health", new Vector2(0f, 1f), new Vector2(114f, -22f), new Vector2(228f, 44f), 26f);
+        coinsLabel = Panel("Coins", new Vector2(0.5f, 1f), new Vector2(0f, -22f), new Vector2(210f, 44f), 23f);
+        roundsLabel = Panel("Rounds", Vector2.one, new Vector2(-143f, -36f), new Vector2(286f, 72f), 23f);
+        weaponLabel = Panel("Weapons", new Vector2(0f, 1f), new Vector2(224f, -118f), new Vector2(448f, 104f), 22f);
         weaponLabel.alignment = TextAlignmentOptions.MidlineLeft;
         rotateLabel = Label("Rotate hint", safeRoot, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(650f, 80f), 32f);
         rotateLabel.text = "Turn your phone sideways\n<size=65%>for a better view</size>";

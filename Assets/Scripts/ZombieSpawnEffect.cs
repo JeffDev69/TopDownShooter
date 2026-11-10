@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Laat een zombie uit een dark ground portal omhoog komen voordat hij kan aanvallen.
+// Laat een zombie uit een donkere opening in de grond omhoog komen voordat hij kan aanvallen.
 public class ZombieSpawnEffect : MonoBehaviour
 {
     public float duration = 0.7f;

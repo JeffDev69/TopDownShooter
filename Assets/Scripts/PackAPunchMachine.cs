@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-// Machine waarmee de player het huidige wapen permanent sterker maakt.
+// Automaat waarmee de speler het huidige wapen blijvend sterker maakt.
 public class PackAPunchMachine : MonoBehaviour
 {
     public int tierOnePrice = 1500;

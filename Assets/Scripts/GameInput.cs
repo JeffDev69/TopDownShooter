@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-// One input path for keyboard/mouse and the phone overlay.
+// Verwerkt invoer van toetsenbord, muis en de bediening op een telefoon op dezelfde plek.
 public static class GameInput
 {
     private static int interactionFrame = -1;
@@ -33,8 +33,8 @@ public static class GameInput
 
     public static bool FireRequested(bool automatic)
     {
-        // Holding the aim stick repeats shots at the weapon's existing fire rate.
-        // Ignore browser-emulated mouse clicks from touches on other controls.
+        // Zolang de richtknop wordt vastgehouden, blijft het wapen schieten met zijn bestaande vuursnelheid.
+        // Negeer muisklikken die de browser nabootst bij aanraking van andere knoppen.
         if (MobileControls.Active) return MobileControls.Firing;
         return Mouse.current != null && (automatic
             ? Mouse.current.leftButton.isPressed : Mouse.current.leftButton.wasPressedThisFrame);
