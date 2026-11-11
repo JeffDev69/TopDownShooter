@@ -4,9 +4,9 @@ using UnityEngine;
 // Automaat waarmee de speler het huidige wapen blijvend sterker maakt.
 public class PackAPunchMachine : MonoBehaviour
 {
-    public int tierOnePrice = 1500;
-    public int tierTwoPrice = 3000;
-    public int tierThreePrice = 5000;
+    public int tierOnePrice = 1000;
+    public int tierTwoPrice = 2000;
+    public int tierThreePrice = 3500;
     public float interactionDistance = 2f;
     public SpriteRenderer machineRenderer;
 

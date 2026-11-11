@@ -15,10 +15,18 @@ public static class WebBuildFooterCleanup
         if (!File.Exists(indexPath)) return;
 
         string html = File.ReadAllText(indexPath);
-        // Remove the default template's product label, keeping its fullscreen button.
+        // Remove the default template's branding, keeping its fullscreen button.
         string updatedHtml = Regex.Replace(html,
             @"[ \t]*<div id=""unity-build-title"">.*?</div>\r?\n?",
             string.Empty, RegexOptions.Singleline);
+        updatedHtml = Regex.Replace(updatedHtml,
+            @"[ \t]*<div id=""unity-logo-title-footer""></div>\r?\n?",
+            string.Empty);
+
+        // Put the fullscreen button over the canvas instead of leaving a footer strip.
+        if (!updatedHtml.Contains("id=\"fullscreen-overlay-style\""))
+            updatedHtml = updatedHtml.Replace("</head>",
+                "<style id=\"fullscreen-overlay-style\">#unity-footer, .unity-mobile #unity-footer { position: absolute; top: 8px; right: 8px; display: block; width: 38px; height: 38px; z-index: 10; background: transparent; } #unity-fullscreen-button { float: none; }</style>\n  </head>");
 
         // Let simultaneous thumb gestures reach Unity without scrolling the page.
         if (!updatedHtml.Contains("id=\"mobile-touch-style\""))
